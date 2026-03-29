@@ -1,1 +1,11 @@
-{"name": "qrono", "version": "1.0.0", "description": "Qrono project", "scripts": {"test": "echo \"no tests yet\""}, "keywords": [], "author": "", "license": "ISC"}
+{
+  "name": "qrono",
+  "version": "1.0.0",
+  "description": "Qrono project",
+  "scripts": {
+    "test": "echo \"no tests yet\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
