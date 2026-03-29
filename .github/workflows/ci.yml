@@ -17,7 +17,7 @@ jobs:
           node-version: 18
 
       - name: Install deps
-        run: npm install || echo "skip"
+        run: npm install
 
       - name: Run tests
-        run: echo "no tests yet
+        run: npm test
