@@ -1,13 +1,233 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
+// backend/prisma/schema.prisma
+// Qrono — University Laboratory Access Management System
+// Run migrations: npx prisma migrate dev --name init
 
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+  url = env("DATABASE_URL")
+  
+}
+
+// ─────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────
+
+enum Role {
+  admin
+  professor
+  student
+}
+
+enum AttendanceMethod {
+  qr
+  manual
+}
+
+// ─────────────────────────────────────────────
+// CORE TABLES
+// ─────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  password  String                        // bcrypt hash
+  role      Role
+  fcmToken  String?  @map("fcm_token")   // Firebase push token (Phase 2)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  student       Student?
+  professor     Professor?
+  admin         Admin?
+  notifications Notification[]
+  recordedAttendances Attendance[] @relation("RecordedBy")
+
+  @@map("users")
+}
+
+model Group {
+  id        String   @id @default(uuid())
+  name      String
+  yearLevel Int?     @map("year_level")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  students Student[]
+  sessions Session[]
+
+  @@map("groups")
+}
+
+model Laboratory {
+  id         String   @id @default(uuid())
+  name       String
+  building   String?
+  roomNumber String?  @map("room_number")
+  capacity   Int?
+  isActive   Boolean  @default(true) @map("is_active")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  // Relations
+  sessions         Session[]
+  unauthorizedLogs UnauthorizedAccessLog[]
+
+  @@map("laboratories")
+}
+
+// ─────────────────────────────────────────────
+// ROLE PROFILE TABLES
+// ─────────────────────────────────────────────
+
+model Student {
+  id          String   @id @default(uuid())
+  userId      String   @unique @map("user_id")
+  urn         String   @unique              // University Registration Number — login field
+  studentCode String?  @map("student_code")
+  groupId     String?  @map("group_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user             User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group            Group?                  @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  attendance       Attendance[]
+  unauthorizedLogs UnauthorizedAccessLog[]
+
+  @@map("students")
+}
+
+model Professor {
+  id             String   @id @default(uuid())
+  userId         String   @unique @map("user_id")
+  email          String   @unique
+  professorCode  String?  @map("professor_code")
+  department     String?
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessions Session[]
+
+  @@map("professors")
+}
+
+model Admin {
+  id        String   @id @default(uuid())
+  userId    String   @unique @map("user_id")
+  email     String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("admins")
+}
+
+// ─────────────────────────────────────────────
+// DEPENDENT TABLES
+// ─────────────────────────────────────────────
+
+model Session {
+  id          String   @id @default(uuid())
+  courseName  String   @map("course_name")
+  startTime   DateTime @map("start_time")
+  endTime     DateTime @map("end_time")
+  isRecurring Boolean  @default(false) @map("is_recurring")
+  recurrence  Json?                        // {"days":["MON","WED"],"until":"2025-06-30"}
+  professorId String   @map("professor_id")
+  groupId     String   @map("group_id")
+  labId       String   @map("lab_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relations
+  professor        Professor               @relation(fields: [professorId], references: [id], onDelete: Cascade)
+  group            Group                   @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  lab              Laboratory              @relation(fields: [labId], references: [id], onDelete: Cascade)
+  qrCodes          QrCode[]
+  attendance       Attendance[]
+  unauthorizedLogs UnauthorizedAccessLog[]
+
+  @@map("sessions")
+}
+
+model QrCode {
+  id         String   @id @default(uuid())
+  sessionId  String   @map("session_id")
+  token      String   @unique             // signed JWT string
+  validFrom  DateTime @map("valid_from")
+  validUntil DateTime @map("valid_until")
+  isRevoked  Boolean  @default(false) @map("is_revoked")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  // Relations
+  session    Session      @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  attendance Attendance[]
+
+  // Only one active (non-revoked) QR per session — enforced in application logic
+  // (Prisma does not support partial unique indexes natively;
+  //  the raw SQL index is applied via a migration SQL file)
+
+  @@map("qr_codes")
+}
+
+model Attendance {
+  id            String           @id @default(uuid())
+  sessionId     String           @map("session_id")
+  studentId     String           @map("student_id")
+  qrCodeId      String?          @map("qr_code_id")
+  recordedById  String?          @map("recorded_by_id")
+  checkInAt     DateTime?        @map("check_in_at")
+  checkOutAt    DateTime?        @map("check_out_at")
+  method        AttendanceMethod @default(qr)
+  createdAt     DateTime         @default(now()) @map("created_at")
+
+  // Relations
+  session    Session   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  student    Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  qrCode     QrCode?   @relation(fields: [qrCodeId], references: [id], onDelete: SetNull)
+  recordedBy User?     @relation("RecordedBy", fields: [recordedById], references: [id], onDelete: SetNull)
+
+  // One attendance record per student per session
+  @@unique([sessionId, studentId])
+  @@map("attendance")
+}
+
+model UnauthorizedAccessLog {
+  id                   String    @id @default(uuid())
+  studentId            String?   @map("student_id")
+  sessionId            String?   @map("session_id")
+  labId                String?   @map("lab_id")
+  scannedToken         String?   @map("scanned_token")
+  reason               String?
+  occurredAt           DateTime  @default(now()) @map("occurred_at")
+  professorNotifiedAt  DateTime? @map("professor_notified_at")
+  adminNotifiedAt      DateTime? @map("admin_notified_at")
+
+  // Relations
+  student Student?    @relation(fields: [studentId], references: [id], onDelete: SetNull)
+  session Session?    @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  lab     Laboratory? @relation(fields: [labId], references: [id], onDelete: SetNull)
+
+  @@map("unauthorized_access_logs")
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  type      String?
+  title     String?
+  body      String?
+  data      Json?
+  isRead    Boolean  @default(false) @map("is_read")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
 }
