@@ -1,4 +1,5 @@
 const prisma = require('../utils/prisma');
+const notificationService = require('../services/notification.service');
 
 exports.getNotifications = async (req, res) => {
   try {
@@ -19,6 +20,9 @@ exports.markAsRead = async (req, res) => {
       where: { id, userId: req.user.id },
       data: { isRead: true }
     });
+
+    notificationService.getIO().to(req.user.id).emit('notification:read', { id });
+
     res.status(200).json({ message: 'Notification marked as read', notification: updated });
   } catch (error) {
     res.status(404).json({ message: 'Notification not found' });
@@ -31,6 +35,9 @@ exports.markAllAsRead = async (req, res) => {
       where: { userId: req.user.id, isRead: false },
       data: { isRead: true }
     });
+
+    notificationService.getIO().to(req.user.id).emit('notification:read_all');
+
     res.status(200).json({ message: 'All notifications marked as read' });
   } catch (error) {
     res.status(500).json({ message: 'Failed to update notifications', error: error.message });
