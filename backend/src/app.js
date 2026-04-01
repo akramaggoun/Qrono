@@ -1,7 +1,13 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
+const { createServer } = require('http');
+const notificationService = require('./services/notification.service');
+
 const app = express();
+const httpServer = createServer(app);
+
+notificationService.init(httpServer);
 
 dotenv.config();
 
@@ -30,7 +36,7 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+httpServer.listen(PORT, () => {
   console.log(`Qrono Backend running on http://localhost:${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });

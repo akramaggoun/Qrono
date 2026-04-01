@@ -114,6 +114,13 @@ exports.scanQR = async (req, res) => {
       }
     });
 
+    await notificationService.createAndSendNotification(req.user.id, {
+      title: "✅ Registered presence",
+      body: `Your attendance for ${attendance.session.courseName} has been validated`,
+      type: "ATTENDANCE_RECORDED",
+      data: { attendanceId: attendance.id, sessionId: sessionId }
+    });
+
     res.status(201).json({
       message: 'Attendance recorded successfully',
       attendance: {

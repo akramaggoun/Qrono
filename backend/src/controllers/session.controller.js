@@ -37,6 +37,19 @@ exports.createSession = async (req, res) => {
       }
     });
 
+    const students = await prisma.user.findMany({
+      where: { groupId: req.body.groupId }
+    });
+
+    for (const student of students) {
+      await notificationService.createAndSendNotification(student.id, {
+        title: "📅 New session",
+        body: `The session ${courseName} is starting at ${labName}.`,
+        type: "SESSION_STARTED",
+        data: { sessionId: newSession.id }
+      });
+    }
+
     const qrExpiration = new Date(end);
     qrExpiration.setMinutes(qrExpiration.getMinutes() + 5);
 
@@ -117,6 +130,19 @@ exports.closeSession = async (req, res) => {
       where: { id },
       data: { endTime: now }
     });
+
+    const students = await prisma.user.findMany({
+      where: { groupId: session.groupId }
+    });
+
+    for (const student of students) {
+      await notificationService.createAndSendNotification(student.id, {
+        title: "🏁 Session ended",
+        body: `The ${session.courseName} session is now closed.`,
+        type: "SESSION_CLOSED",
+        data: { sessionId: session.id }
+      });
+    }
 
     if (session.qrCodes.length > 0) {
       await prisma.qrCode.updateMany({
