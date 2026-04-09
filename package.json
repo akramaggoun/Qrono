@@ -11,6 +11,7 @@
     "tunnel:stop": "cd devops/tunnel && ./stop-tunnel.sh",
     "tunnel:status": "cd devops/tunnel && ./status-tunnel.sh",
     "wireless:setup": "echo 'Run: npm run tunnel:setup'",
+    "wireless:demo": "./demo-wireless.sh",
     "wireless:test": "curl -k https://qrono-api.yourdomain.com/api/auth/login"
   },
   "keywords": ["attendance", "qr-code", "university", "wireless", "cloudflare"],
