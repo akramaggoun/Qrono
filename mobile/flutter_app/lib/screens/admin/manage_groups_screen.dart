@@ -119,15 +119,20 @@ class _ManageGroupsScreenState extends State<ManageGroupsScreen> {
                         icon: Icon(isEditing ? Icons.save_outlined : Icons.add, size: 18),
                         label: Text(isEditing ? 'Save' : 'Create'),
                         onPressed: () async {
-                          if (!formKey.currentState!.validate()) return;
+                          print('🔴 BUTTON PRESSED: Add/Edit Group');
+                          final isValid = formKey.currentState!.validate();
+                          print('🟡 FORM VALID: $isValid');
+                          if (!isValid) return;
+                          
                           final adminProvider = Provider.of<AdminProvider>(context, listen: false);
                           
                           final groupData = {
-                            'name': nameCtrl.text,
-                            'year_level': yearCtrl.text,
-                            'specialty': specialtyCtrl.text,
+                            'name': nameCtrl.text.trim(),
+                            'year_level': yearCtrl.text.trim(),
+                            'specialty': specialtyCtrl.text.trim(),
                           };
 
+                          print('🟠 CALLING adminProvider.addGroup/updateGroup()');
                           bool success;
                           if (isEditing) {
                             success = await adminProvider.updateGroup(group.id, groupData);
@@ -135,7 +140,9 @@ class _ManageGroupsScreenState extends State<ManageGroupsScreen> {
                             success = await adminProvider.addGroup(groupData);
                           }
 
-                          if (success && mounted) {
+                          if (!mounted) return;
+
+                          if (success) {
                             Navigator.pop(context);
                             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                               content: Row(children: [
@@ -144,6 +151,14 @@ class _ManageGroupsScreenState extends State<ManageGroupsScreen> {
                                 Text(isEditing ? 'Group updated' : 'Group created successfully'),
                               ]),
                               backgroundColor: Colors.green,
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              margin: const EdgeInsets.all(16),
+                            ));
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                              content: Text(adminProvider.errorMessage ?? 'Failed to save group. Try again.'),
+                              backgroundColor: Colors.redAccent,
                               behavior: SnackBarBehavior.floating,
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                               margin: const EdgeInsets.all(16),

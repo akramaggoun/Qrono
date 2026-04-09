@@ -21,7 +21,7 @@ class PresenceProvider extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      final response = await _apiClient.get('/api/sessions/\$sessionId/attendances');
+      final response = await _apiClient.get('/sessions/$sessionId/attendances');
       if (response.statusCode == 200) {
         _attendances = jsonDecode(response.body)['attendances'] ?? [];
       }
@@ -36,7 +36,7 @@ class PresenceProvider extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      final response = await _apiClient.get('/api/presences/my-attendances');
+      final response = await _apiClient.get('/presences/my-attendances');
       if (response.statusCode == 200) {
         _myAttendances = jsonDecode(response.body)['attendances'] ?? [];
       }
@@ -54,7 +54,7 @@ class PresenceProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await _apiClient.post('/api/presences/scan', {
+      final response = await _apiClient.post('/presences/scan', {
         'qr_token': qrToken,
       });
 

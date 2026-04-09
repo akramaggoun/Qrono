@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../providers/session_provider.dart';
 import '../../models/session_model.dart';
 import 'attendance_list_screen.dart';
+import 'show_qr_screen.dart';
 
 class MySessionsScreen extends StatefulWidget {
   const MySessionsScreen({super.key});
@@ -79,13 +80,13 @@ class _MySessionsScreenState extends State<MySessionsScreen> {
 
   Widget _buildSessionCard(SessionModel session, Color cardColor, Color tealColor, BuildContext context) {
     final isClosed = DateTime.now().isAfter(session.endTime);
-    final statusText = isClosed ? 'CLOSED' : 'ACTIVE';
+    final statusText = isClosed ? 'منتهية (CLOSED)' : 'نشطة (ACTIVE)';
     final statusColor = isClosed ? Colors.red.shade700 : Colors.green;
     
     final startTime = _formatTime(session.startTime.toIso8601String());
     final endTime = _formatTime(session.endTime.toIso8601String());
-    final groupName = session.groupId; 
-    final labName = session.labId;
+    final groupName = session.groupName ?? session.groupId; 
+    final labName = session.labName ?? session.labId;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -93,6 +94,9 @@ class _MySessionsScreenState extends State<MySessionsScreen> {
         color: cardColor,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.white12, width: 0.5),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 10, offset: const Offset(0, 4))
+        ]
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
@@ -101,7 +105,7 @@ class _MySessionsScreenState extends State<MySessionsScreen> {
             context,
             MaterialPageRoute(
               builder: (context) => AttendanceListScreen(
-                courseName: 'Session', 
+                courseName: session.courseName, // Fixed from hardcoded 'Session'
                 sessionId: session.id ?? '',
               ),
             ),
@@ -115,10 +119,14 @@ class _MySessionsScreenState extends State<MySessionsScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    'Course Session',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white),
+                  Expanded(
+                    child: Text(
+                      session.courseName,
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
+                  const SizedBox(width: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
@@ -133,16 +141,41 @@ class _MySessionsScreenState extends State<MySessionsScreen> {
                 ],
               ),
               const SizedBox(height: 10),
-              _buildInfoRow(Icons.science_outlined, labName),
-              _buildInfoRow(Icons.groups_outlined, groupName),
+              _buildInfoRow(Icons.science_outlined, 'المخبر: $labName'),
+              _buildInfoRow(Icons.groups_outlined, 'الفوج: $groupName'),
+              if (session.attendanceCount != null)
+                _buildInfoRow(Icons.people_outline, 'عدد الحضور: ${session.attendanceCount} طلاب'),
               const Divider(height: 30, color: Colors.white12),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Time:', style: TextStyle(color: Colors.white70, fontSize: 13)),
-                  Text('\$startTime - \$endTime', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Colors.white)),
+                  const Text('التوقيت:', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                  Text('$startTime - $endTime', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Colors.white)),
                 ],
               ),
+              if (!isClosed && (session.qrToken != null || true)) ...[
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: tealColor,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(vertical: 12)
+                    ),
+                    icon: const Icon(Icons.qr_code_2),
+                    label: const Text('إظهار كود QR (Scanner)', style: TextStyle(fontWeight: FontWeight.bold)),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => ShowQrScreen(session: session)),
+                      );
+                    },
+                  ),
+                )
+              ]
             ],
           ),
         ),

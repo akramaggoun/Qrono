@@ -7,7 +7,14 @@ class SessionModel {
   final DateTime startTime;
   final DateTime endTime;
   final bool isRecurring;
+  final String? qrToken;
   final Map<String, dynamic>? recurrence;
+  
+  // Extended fields for UI
+  final String? status;
+  final String? labName;
+  final String? groupName;
+  final int? attendanceCount;
 
   SessionModel({
     this.id,
@@ -18,20 +25,30 @@ class SessionModel {
     required this.startTime,
     required this.endTime,
     required this.isRecurring,
+    this.qrToken,
     this.recurrence,
+    this.status,
+    this.labName,
+    this.groupName,
+    this.attendanceCount,
   });
 
   factory SessionModel.fromJson(Map<String, dynamic> json) {
     return SessionModel(
       id: json['id'],
-      courseName: json['course_name'],
-      labId: json['lab_id'].toString(),
-      groupId: json['group_id'].toString(),
-      professorId: json['professor_id'].toString(),
-      startTime: DateTime.parse(json['start_time']),
-      endTime: DateTime.parse(json['end_time']),
-      isRecurring: json['is_recurring'] ?? false,
+      courseName: json['course_name'] ?? json['courseName'] ?? '',
+      labId: json['lab_id']?.toString() ?? json['labId']?.toString() ?? '',
+      groupId: json['group_id']?.toString() ?? json['groupId']?.toString() ?? '',
+      professorId: json['professor_id']?.toString() ?? json['professorId']?.toString() ?? '',
+      startTime: DateTime.tryParse(json['start_time'] ?? json['startTime'] ?? '') ?? DateTime.now(),
+      endTime: DateTime.tryParse(json['end_time'] ?? json['endTime'] ?? '') ?? DateTime.now(),
+      isRecurring: json['is_recurring'] ?? json['isRecurring'] ?? false,
+      qrToken: json['qr_code'] != null ? json['qr_code']['token'] : null,
       recurrence: json['recurrence'],
+      status: json['status'],
+      labName: json['lab']?['name'],
+      groupName: json['group']?['name'],
+      attendanceCount: json['_count']?['attendance']?.toInt(),
     );
   }
 
