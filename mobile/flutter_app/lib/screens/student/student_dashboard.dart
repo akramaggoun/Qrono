@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../notification_screen.dart';
+import '../wireless_settings_screen.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/notification_provider.dart';
@@ -52,6 +53,13 @@ class _StudentDashboardState extends State<StudentDashboard> {
         ),
         actions: [
           _buildNotificationIcon(),
+          IconButton(
+            icon: const Icon(Icons.settings, color: AppColors.primaryTeal),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const WirelessSettingsScreen()),
+            ),
+          ),
           const SizedBox(width: 8),
           IconButton(
             icon: const Icon(Icons.logout_rounded, color: AppColors.primaryTeal),

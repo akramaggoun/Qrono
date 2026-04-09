@@ -57,6 +57,12 @@ mobile/flutter_app/ios/Flutter/Flutter.podspec
 *.bak
 
 # =========================================
+# CLOUDFLARE TUNNEL
+# =========================================
+devops/tunnel/credentials.json
+devops/tunnel/*.log
+
+# =========================================
 # DATABASE / LOCAL DATA
 # =========================================
 *.sql.bak

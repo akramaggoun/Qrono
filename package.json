@@ -1,11 +1,21 @@
 {
   "name": "qrono",
   "version": "1.0.0",
-  "description": "Qrono project",
+  "description": "Qrono - University Lab Attendance System with Wireless QR Scanning",
   "scripts": {
-    "test": "echo \"no tests yet\""
+    "test": "echo \"no tests yet\"",
+    "backend:start": "cd backend && npm start",
+    "backend:dev": "cd backend && npm run dev",
+    "tunnel:start": "cd devops/tunnel && ./start-tunnel.sh",
+    "tunnel:stop": "cd devops/tunnel && ./stop-tunnel.sh",
+    "tunnel:status": "cd devops/tunnel && ./status-tunnel.sh",
+    "wireless:setup": "echo 'Follow WIRELESS_SETUP.md for complete setup instructions'",
+    "wireless:test": "curl -k https://qrono-api.yourdomain.com/api/auth/login"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC"
+  "keywords": ["attendance", "qr-code", "university", "wireless", "cloudflare"],
+  "author": "Qrono Team",
+  "license": "ISC",
+  "engines": {
+    "node": ">=18.0.0"
+  }
 }

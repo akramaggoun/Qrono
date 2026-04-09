@@ -11,7 +11,36 @@ notificationService.init(httpServer);
 
 dotenv.config();
 
-app.use(cors());
+// Enhanced CORS configuration for wireless access
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true);
+
+    // Allow localhost for development
+    if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+      return callback(null, true);
+    }
+
+    // Allow Cloudflare tunnel domains
+    if (origin.includes('yourdomain.com') || origin.includes('cloudflare') || origin.includes('tunnel')) {
+      return callback(null, true);
+    }
+
+    // Allow all origins in development mode
+    if (process.env.NODE_ENV === 'development') {
+      return callback(null, true);
+    }
+
+    // Reject other origins in production
+    return callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 
 app.use((req, res, next) => {
@@ -46,6 +75,10 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, () => {
-  console.log(`Qrono Backend running on http://localhost:${PORT}`);
-  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🚀 Qrono Backend running on http://localhost:${PORT}`);
+  console.log(`🌐 Wireless Access: Configure Cloudflare tunnel for remote QR scanning`);
+  console.log(`📱 Mobile App: Update API constants to use tunnel URL when needed`);
+  console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`📊 Database: ${process.env.DATABASE_URL ? 'Connected' : 'Not configured'}`);
+});
 });
