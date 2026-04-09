@@ -2,17 +2,20 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const { createServer } = require('http');
+
+dotenv.config();
+
 const notificationService = require('./services/notification.service');
+const globalLimiter = require('./middleware/rate-limiter.middleware');
 
 const app = express();
 const httpServer = createServer(app);
 
 notificationService.init(httpServer);
 
-dotenv.config();
-
 app.use(cors());
 app.use(express.json());
+app.use('/api/', globalLimiter);
 
 app.use((req, res, next) => {
   const fullPath = req.originalUrl || req.url;
