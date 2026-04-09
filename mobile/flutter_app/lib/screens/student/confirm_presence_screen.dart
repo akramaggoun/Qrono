@@ -18,7 +18,9 @@ class ConfirmPresenceScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final session = attendanceData['session'] ?? {};
-    final checkInAt = DateTime.parse(attendanceData['check_in_at']);
+    final checkInAt = attendanceData['checkInAt'] != null 
+        ? DateTime.parse(attendanceData['checkInAt']) 
+        : DateTime.now();
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -64,7 +66,7 @@ class ConfirmPresenceScreen extends StatelessWidget {
               ),
               child: Column(
                 children: [
-                  _buildDetailRow(Icons.book_outlined, 'Matière', session['course_name'] ?? 'Inconnu'),
+                  _buildDetailRow(Icons.book_outlined, 'Matière', session['courseName'] ?? 'Inconnu'),
                   const Divider(height: 30),
                   _buildDetailRow(Icons.science_outlined, 'Laboratoire', session['laboratory'] ?? 'Non spécifié'),
                   const Divider(height: 30),

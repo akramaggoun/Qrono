@@ -130,7 +130,11 @@ class _ManageLabsScreenState extends State<ManageLabsScreen> {
                       icon: Icon(isEditing ? Icons.save_outlined : Icons.add, size: 18),
                       label: Text(isEditing ? 'Save' : 'Add'),
                       onPressed: () async {
-                        if (!formKey.currentState!.validate()) return;
+                        print('🔴 BUTTON PRESSED: Add/Edit Lab');
+                        final isValid = formKey.currentState!.validate();
+                        print('🟡 FORM VALID: $isValid');
+                        if (!isValid) return;
+                        
                         final adminProvider = Provider.of<AdminProvider>(context, listen: false);
                         
                         final labData = {
@@ -138,18 +142,21 @@ class _ManageLabsScreenState extends State<ManageLabsScreen> {
                           'building': buildingCtrl.text,
                           'room_number': roomCtrl.text,
                           'capacity': int.parse(capCtrl.text),
-                          'is_active': isActive,
+                          'isActive': isActive,
                         };
 
+                        print('🟠 CALLING adminProvider.addLaboratory/updateLaboratory()');
                         bool success;
                         if (isEditing) {
-                          success = await adminProvider.updateLaboratory(lab!.id, labData);
+                          success = await adminProvider.updateLaboratory(lab.id, labData);
                         } else {
                           success = await adminProvider.addLaboratory(labData);
                         }
 
-                        if (success && mounted) {
-                          Navigator.pop(ctx);
+                        if (!mounted) return;
+
+                        if (success) {
+                          Navigator.pop(ctx); // ctx is from StatefulBuilder
                           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                             content: Row(children: [
                               const Icon(Icons.check_circle_outline, color: Colors.white, size: 18),
@@ -161,10 +168,13 @@ class _ManageLabsScreenState extends State<ManageLabsScreen> {
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             margin: const EdgeInsets.all(16),
                           ));
-                        } else if (mounted) {
+                        } else {
                           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                             content: Text(adminProvider.errorMessage ?? "An error occurred."),
                             backgroundColor: Colors.redAccent,
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            margin: const EdgeInsets.all(16),
                           ));
                         }
                       },

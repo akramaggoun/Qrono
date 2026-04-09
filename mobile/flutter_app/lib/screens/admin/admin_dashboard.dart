@@ -28,12 +28,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
     });
   }
 
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Qrono Control Hub'),
+        title: const Text('Qrono Control Hub', style: TextStyle(color: Colors.black87)),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.black87),
         actions: [
           IconButton(
             tooltip: 'Logout',
@@ -46,7 +48,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
               children: [
                 IconButton(
                   tooltip: 'Notifications',
-                  icon: const Icon(Icons.notifications_none_outlined),
+                  icon: const Icon(Icons.notifications_none_outlined, color: Colors.black87),
                   onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationScreen())),
                 ),
                 if (provider.unreadCount > 0)
@@ -67,7 +69,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.refresh), 
+            icon: const Icon(Icons.refresh, color: Colors.black87), 
             onPressed: () => Provider.of<AdminProvider>(context, listen: false).fetchStatistics()
           ),
         ],
@@ -75,32 +77,39 @@ class _AdminDashboardState extends State<AdminDashboard> {
       body: Consumer<AdminProvider>(
         builder: (context, adminProvider, child) {
           if (adminProvider.isLoading && adminProvider.statistics.isEmpty) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: CircularProgressIndicator(color: AppColors.primaryTeal));
           }
           
           final stats = adminProvider.statistics;
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(20.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildAdminProfile(),
-                const SizedBox(height: 30),
+          return RefreshIndicator(
+            onRefresh: () async {
+              await adminProvider.fetchStatistics();
+              await Provider.of<NotificationProvider>(context, listen: false).fetchNotifications();
+            },
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildAdminProfile(),
+                  const SizedBox(height: 30),
 
-                // Statistics Section (Step 6)
-                _buildStatsSection(stats),
-                const SizedBox(height: 40),
+                  // Unified Statistics Section
+                  _buildUnifiedStats(stats, adminProvider),
+                  const SizedBox(height: 40),
 
-                // Management Grid
-                const Text('Ecosystem Management', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
-                const SizedBox(height: 15),
-                _buildManagementGrid(),
+                  // Management Grid
+                  const Text('Ecosystem Management', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
+                  const SizedBox(height: 15),
+                  _buildManagementGrid(),
 
-                const SizedBox(height: 30),
-                // Quick Status
-                _buildQuickSecurityStatus(stats['unauthorizedToday']?.toString() ?? '0'),
-              ],
+                  const SizedBox(height: 30),
+                  // Quick Status
+                  _buildQuickSecurityStatus(stats['unauthorizedToday']?.toString() ?? '0'),
+                ],
+              ),
             ),
           );
         },
@@ -125,71 +134,141 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
   }
 
-  Widget _buildStatsSection(Map<String, dynamic> stats) {
+  Widget _buildUnifiedStats(Map<String, dynamic> stats, AdminProvider provider) {
+    final activeLabs = (stats['laboratories'] is List ? (stats['laboratories'] as List).length : 0);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Global Dashboard', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
-        const SizedBox(height: 15),
-        
-        // Main Trend Card (Active Sessions)
+        // Hero card: Active Sessions
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(22),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF00C9A7), Color(0xFF0099FF)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(22),
+            boxShadow: [BoxShadow(color: AppColors.primaryTeal.withOpacity(0.3), blurRadius: 20, offset: const Offset(0, 8))],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Active Sessions', style: TextStyle(color: Colors.white70, fontSize: 14)),
+                  const SizedBox(height: 4),
+                  Text(stats['activeSessions']?.toString() ?? '0', style: const TextStyle(color: Colors.white, fontSize: 42, fontWeight: FontWeight.bold, height: 1.0)),
+                  const SizedBox(height: 4),
+                  const Text('Real-time monitoring', style: TextStyle(color: Colors.white60, fontSize: 12)),
+                ],
+              ),
+              const Icon(Icons.flash_on_rounded, color: Colors.white, size: 52),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Row 1: Professors & Students
+        Row(
+          children: [
+            _buildStatCard('Professors', provider.totalProfessors.toString(), Icons.school, const Color(0xFF6C63FF)),
+            const SizedBox(width: 12),
+            _buildStatCard('Students', provider.totalStudents.toString(), Icons.school_outlined, AppColors.primaryTeal),
+          ],
+        ),
+        const SizedBox(height: 12),
+
+        // Row 2: Groups & Today Sessions
+        Row(
+          children: [
+            _buildStatCard('Groups', provider.totalGroups.toString(), Icons.people_alt, const Color(0xFFFF9800)),
+            const SizedBox(width: 12),
+            _buildStatCard('Today Sessions', provider.todaySessions.toString(), Icons.event_available, const Color(0xFF2196F3)),
+          ],
+        ),
+        const SizedBox(height: 12),
+
+        // Row 3: Attendance & Security Alerts
+        Row(
+          children: [
+            _buildStatCard('Today Attendance', provider.todayAttendance.toString(), Icons.check_circle_outline, Colors.green),
+            const SizedBox(width: 12),
+            _buildStatCard('Security Alerts', stats['unauthorizedToday']?.toString() ?? '0', Icons.gpp_maybe, Colors.redAccent),
+          ],
+        ),
+        const SizedBox(height: 12),
+
+        // Row 4: Total Users & Active Labs
+        Row(
+          children: [
+            _buildStatCard('Total Users', stats['totalUsers']?.toString() ?? '0', Icons.people_outline, Colors.blueGrey),
+            const SizedBox(width: 12),
+            _buildStatCard('Active Labs', activeLabs.toString(), Icons.science_outlined, Colors.orange),
+          ],
+        ),
+        const SizedBox(height: 16),
+
+        // Attendance Rate Progress Bar
         Container(
           width: double.infinity,
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: AppColors.primaryTeal,
-            borderRadius: BorderRadius.circular(25),
-            boxShadow: [BoxShadow(color: AppColors.primaryTeal.withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 8))],
+            color: AppColors.cardColor,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.borderColor, width: 0.5),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Active Sessions', style: TextStyle(color: Colors.white70, fontSize: 14)),
-              const SizedBox(height: 5),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(stats['activeSessions']?.toString() ?? '0', style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold)),
-                  const Icon(Icons.flash_on, color: Colors.white, size: 40),
+                  const Text('Attendance Rate Today', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87)),
+                  Text('${provider.attendanceRate.toInt()}%', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primaryTeal)),
                 ],
               ),
-              const Text('Real-time monitoring', style: TextStyle(color: Colors.white60, fontSize: 12)),
+              const SizedBox(height: 12),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: LinearProgressIndicator(
+                  value: provider.attendanceRate / 100,
+                  backgroundColor: AppColors.borderColor,
+                  color: AppColors.primaryTeal,
+                  minHeight: 10,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text('${provider.todayAttendance} students present today', style: const TextStyle(fontSize: 12, color: AppColors.grayText)),
             ],
           ),
-        ),
-        const SizedBox(height: 15),
-
-        // Grid of Stats (Step 6)
-        Row(
-          children: [
-            _buildSmallStatCard('Total Users', stats['totalUsers']?.toString() ?? '0', Icons.people_outline, Colors.blue),
-            const SizedBox(width: 15),
-            _buildSmallStatCard('Today Attendance', stats['todayAttendance']?.toString() ?? '0', Icons.check_circle_outline, Colors.green),
-          ],
-        ),
-        const SizedBox(height: 15),
-        Row(
-          children: [
-            _buildSmallStatCard('Security Alerts', stats['unauthorizedToday']?.toString() ?? '0', Icons.gpp_maybe, Colors.redAccent),
-            const SizedBox(width: 15),
-            _buildSmallStatCard('Active Labs', stats['laboratoriesCount']?.toString() ?? '0', Icons.science_outlined, Colors.orange),
-          ],
         ),
       ],
     );
   }
 
-  Widget _buildSmallStatCard(String label, String value, IconData icon, Color color) {
+  Widget _buildStatCard(String label, String value, IconData icon, Color color) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(color: AppColors.cardColor, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.borderColor, width: 0.5)),
+        decoration: BoxDecoration(
+          color: AppColors.cardColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.borderColor, width: 0.5),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, color: color, size: 18),
+            Container(
+              padding: const EdgeInsets.all(7),
+              decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+              child: Icon(icon, color: color, size: 18),
+            ),
             const SizedBox(height: 10),
-            Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.black87)),
+            Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 22, color: Colors.black87)),
             Text(label, style: const TextStyle(fontSize: 11, color: AppColors.grayText)),
           ],
         ),
@@ -214,7 +293,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       decoration: BoxDecoration(color: AppColors.cardColor, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.borderColor, width: 0.5)),
       child: ListTile(
         leading: Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(10)), child: Icon(icon, color: color, size: 24)),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.black87)),
         subtitle: Text(sub, style: const TextStyle(fontSize: 12, color: AppColors.grayText)),
         trailing: const Icon(Icons.arrow_forward_ios, size: 12, color: AppColors.grayText),
         onTap: tap,
@@ -244,6 +323,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
       ),
     );
   }
+
+
 
   void _showLogoutDialog(BuildContext context) {
     showDialog(

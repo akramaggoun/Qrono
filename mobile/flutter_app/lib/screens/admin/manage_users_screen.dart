@@ -8,6 +8,7 @@ import '../../models/admin_model.dart';
 import '../../models/group_model.dart';
 import '../../providers/admin_provider.dart';
 import 'package:provider/provider.dart';
+import '../../core/storage/token_storage.dart';
 
 class ManageUsersScreen extends StatefulWidget {
   const ManageUsersScreen({super.key});
@@ -24,6 +25,7 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
   @override
   void initState() {
     super.initState();
+    _checkToken();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final adminProvider = Provider.of<AdminProvider>(context, listen: false);
       adminProvider.fetchUsers();
@@ -31,42 +33,52 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
     });
   }
 
+  Future<void> _checkToken() async {
+    final token = await TokenStorage.getToken();
+    print('🔑 TOKEN IN ADMIN SCREEN: $token');
+    if (token == null && mounted) {
+      print('❌ NO TOKEN — Redirecting to login');
+      // Navigator.pushReplacementNamed(context, '/login') per instructions
+      Navigator.of(context).pushReplacementNamed('/login');
+    }
+  }
+
   List<UserModel> _getFilteredUsers(List<UserModel> users) {
     return users.where((u) {
       bool matchSearch = u.fullName.toLowerCase().contains(_query.toLowerCase());
       if (u is StudentModel) {
-        matchSearch = matchSearch || (u as StudentModel).urn.contains(_query);
+        matchSearch = matchSearch || (u).urn.contains(_query);
       }
       
       final matchRole = _filterRole == 'All' ||
-          (_filterRole == 'Student'   && u is StudentModel) ||
-          (_filterRole == 'Professor' && u is ProfessorModel) ||
-          (_filterRole == 'Admin'     && u is AdminModel);
+          (_filterRole == 'Student'   && u.role == 'student') ||
+          (_filterRole == 'Professor' && u.role == 'professor') ||
+          (_filterRole == 'Admin'     && u.role == 'admin');
       return matchSearch && matchRole;
     }).toList();
   }
 
   // ── couleur/icône par rôle ────────────────────────────────
   Color _roleColor(UserModel u) {
-    if (u is ProfessorModel) return Colors.blue;
-    if (u is AdminModel)     return Colors.purple;
+    if (u.role == 'professor') return Colors.blue;
+    if (u.role == 'admin')     return Colors.purple;
     return AppColors.primaryTeal;
   }
   IconData _roleIcon(UserModel u) {
-    if (u is ProfessorModel) return Icons.school;
-    if (u is AdminModel)     return Icons.admin_panel_settings;
+    if (u.role == 'professor') return Icons.school;
+    if (u.role == 'admin')     return Icons.admin_panel_settings;
     return Icons.person;
   }
   String _roleName(UserModel u) {
-    if (u is ProfessorModel) return 'Professor';
-    if (u is AdminModel)     return 'Admin';
+    if (u.role == 'professor') return 'Professor';
+    if (u.role == 'admin')     return 'Admin';
     return 'Student';
   }
 
   String _roleSubtitle(UserModel u) {
-    if (u is ProfessorModel) return u.department;
-    if (u is AdminModel)     return u.email;
-    return 'URN: ${(u as StudentModel).urn}';
+    if (u.role == 'professor') return u.email;
+    if (u.role == 'admin')     return u.email;
+    return 'URN: ${u.matricule}';
   }
 
   // ── Dialog ajout/édition ──────────────────────────────────
@@ -80,10 +92,8 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
     final nameCtrl      = TextEditingController(text: user?.fullName ?? '');
     final emailCtrl     = TextEditingController(text: user?.email ?? '');
     final passwordCtrl  = TextEditingController();  // jamais pré-remplie pour la sécurité
-    final extra1Ctrl    = TextEditingController(
-        text: (user is StudentModel) ? user.urn : (user is ProfessorModel ? user.professorCode : ''));
-    final extra2Ctrl    = TextEditingController(
-        text: (user is StudentModel) ? user.studentCode : (user is ProfessorModel ? user.department : ''));
+    final extra1Ctrl    = TextEditingController(text: user?.matricule ?? '');
+    final extra2Ctrl    = TextEditingController();
     bool _passwordVisible = false;
     final formKey = GlobalKey<FormState>();
 
@@ -232,28 +242,30 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
                     Expanded(
                       child: ElevatedButton.icon(
                         icon: Icon(isEditing ? Icons.save_outlined : Icons.person_add_alt, size: 18),
-                        label: Text(isEditing 
-                          ? 'Update' 
-                          : 'Create'),
+                        label: Text(isEditing ? 'Update' : 'Create'),
                         onPressed: () async {
-                          if (!formKey.currentState!.validate()) return;
+                          print('🔴 BUTTON PRESSED: Add/Edit User');
+                          final isValid = formKey.currentState!.validate();
+                          print('🟡 FORM VALID: $isValid');
+                          if (!isValid) return;
                           
                           final userData = {
-                            'full_name': nameCtrl.text,
+                            'name': nameCtrl.text,
                             'role': selectedRole,
-                            'is_active': isActive,
+                            'isActive': isActive,
                             if (passwordCtrl.text.isNotEmpty) 'password': passwordCtrl.text,
                             'email': emailCtrl.text,
                             if (selectedRole == 'student') ...{
                               'urn': extra1Ctrl.text,
-                              'group_id': selectedGroupId,
+                              'groupId': selectedGroupId,
                             },
                             if (selectedRole == 'professor') ...{
-                              'professor_code': extra1Ctrl.text,
+                              'professorCode': extra1Ctrl.text,
                               'department': extra2Ctrl.text,
                             },
                           };
 
+                          print('🟠 CALLING adminProvider.addUser/updateUser()');
                           bool success;
                           if (isEditing) {
                             success = await adminProvider.updateUser(user.id, userData);
@@ -261,7 +273,9 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
                             success = await adminProvider.addUser(userData);
                           }
 
-                          if (success && mounted) {
+                          if (!mounted) return;
+
+                          if (success) {
                             Navigator.pop(ctx);
                             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                               content: Row(children: [
@@ -274,10 +288,13 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                               margin: const EdgeInsets.all(16),
                             ));
-                          } else if (mounted) {
+                          } else {
                             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                               content: Text(adminProvider.errorMessage ?? "An error occurred."),
                               backgroundColor: Colors.redAccent,
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              margin: const EdgeInsets.all(16),
                             ));
                           }
                         },

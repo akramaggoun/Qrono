@@ -1,6 +1,7 @@
 class ApiConstants {
-  static const String baseUrl = 'http://10.0.2.2:3000/api';
-  
-  // Auth endpoints
+  // Use localhost for local PostgreSQL
+  static const String baseUrl = 'http://localhost:3000/api';
+  // Auth endpoints (no need for /api here as it's in baseUrl)
   static const String login = '$baseUrl/auth/login';
+  static const String logout = '$baseUrl/auth/logout';
 }

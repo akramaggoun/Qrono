@@ -85,17 +85,7 @@ class _ShowQrScreenState extends State<ShowQrScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final Map<String, dynamic> qrPayload = {
-      'course_name': widget.session.courseName,
-      'lab_id': widget.session.labId,
-      'group_id': widget.session.groupId,
-      'professor_id': widget.session.professorId,
-      'start_time': widget.session.startTime.toIso8601String(),
-      'end_time': widget.session.endTime.toIso8601String(),
-      'session_id': widget.session.id,
-    };
-
-    final String qrData = jsonEncode(qrPayload);
+    final String qrData = widget.session.qrToken ?? "ERROR: NO TOKEN";
 
     return Scaffold(
       backgroundColor: AppColors.background,
