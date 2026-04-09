@@ -8,19 +8,32 @@ exports.getStatistics = async (req, res) => {
 
     const [
       totalUsers,
+      totalProfessors,
+      totalStudents,
+      totalGroups,
       activeSessionsCount,
+      todaySessionsCount,
       todayAttendanceCount,
       todayUnauthorizedCount,
       activeLabs
     ] = await Promise.all([
       prisma.user.count(),
+      prisma.user.count({ where: { role: 'professor' } }),
+      prisma.user.count({ where: { role: 'student' } }),
+      prisma.group.count(),
       prisma.session.count({
         where: {
-          startTime: { lte: now },
-          endTime: { gte: now }
+          status: 'ACTIVE'
         }
       }),
-
+      prisma.session.count({
+        where: {
+          startTime: {
+            gte: startOfDay,
+            lte: endOfDay
+          }
+        }
+      }),
       prisma.attendance.count({
         where: {
           checkInAt: {
@@ -29,7 +42,6 @@ exports.getStatistics = async (req, res) => {
           }
         }
       }),
-
       prisma.unauthorizedAccessLog.count({
         where: {
           occurredAt: {
@@ -38,7 +50,6 @@ exports.getStatistics = async (req, res) => {
           }
         }
       }),
-
       prisma.laboratory.findMany({
         where: { isActive: true },
         select: {
@@ -52,8 +63,15 @@ exports.getStatistics = async (req, res) => {
       })
     ]);
 
+    const attendanceRate = totalStudents > 0 ? Math.min(100, Math.round((todayAttendanceCount / totalStudents) * 100)) : 0;
+
     const stats = {
       totalUsers,
+      totalProfessors,
+      totalStudents,
+      totalGroups,
+      todaySessions: todaySessionsCount,
+      attendanceRate,
       activeSessions: activeSessionsCount,
       todayAttendance: todayAttendanceCount,
       unauthorizedToday: todayUnauthorizedCount,

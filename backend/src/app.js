@@ -14,6 +14,15 @@ dotenv.config();
 app.use(cors());
 app.use(express.json());
 
+app.use((req, res, next) => {
+  const fullPath = req.originalUrl || req.url;
+  console.log(`[REQUEST] ${req.method} ${fullPath}`);
+  res.on('finish', () => {
+    console.log(`[RESPONSE] ${req.method} ${fullPath} -> ${res.statusCode}`);
+  });
+  next();
+});
+
 app.use('/api/auth', require('./routes/auth.routes'));
 app.use('/api/users', require('./routes/user.routes'));
 

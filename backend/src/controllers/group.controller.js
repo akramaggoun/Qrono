@@ -9,7 +9,6 @@ exports.getAllGroups = async (req, res) => {
         }
       },
       orderBy: [
-        { yearLevel: 'asc' },
         { name: 'asc' }
       ]
     });
@@ -22,7 +21,9 @@ exports.getAllGroups = async (req, res) => {
 };
 
 exports.createGroup = async (req, res) => {
-  const { name, yearLevel } = req.body;
+  console.log('📥 CREATE GROUP REQUEST:', req.body);
+  const { name, year_level, specialty } = req.body;
+  const yearLevel = year_level;
 
   if (!name) {
     return res.status(400).json({ message: 'Group name is required' });
@@ -32,7 +33,8 @@ exports.createGroup = async (req, res) => {
     const newGroup = await prisma.group.create({
       data: {
         name,
-        yearLevel: yearLevel ? parseInt(yearLevel) : null
+        yearLevel: yearLevel || null,
+        specialty: specialty || null
       }
     });
 
@@ -49,7 +51,8 @@ exports.createGroup = async (req, res) => {
 
 exports.updateGroup = async (req, res) => {
   const { id } = req.params;
-  const { name, yearLevel } = req.body;
+  const { name, year_level, specialty } = req.body;
+  const yearLevel = year_level;
 
   try {
     const existingGroup = await prisma.group.findUnique({ where: { id } });
@@ -61,7 +64,8 @@ exports.updateGroup = async (req, res) => {
       where: { id },
       data: {
         name: name || existingGroup.name,
-        yearLevel: yearLevel !== undefined ? parseInt(yearLevel) : existingGroup.yearLevel
+        yearLevel: yearLevel !== undefined ? yearLevel : existingGroup.yearLevel,
+        specialty: specialty !== undefined ? specialty : existingGroup.specialty
       }
     });
 
@@ -94,11 +98,8 @@ exports.deleteGroup = async (req, res) => {
       return res.status(404).json({ message: 'Group not found' });
     }
 
-    if (group._count.students > 0) {
-      return res.status(409).json({ 
-        message: `Cannot delete group. ${group._count.students} student(s) are still assigned to this group. Please unassign them first.` 
-      });
-    }
+    // The safety check was removed to allow force deleting the group.
+    // Prisma will automatically set groupId to null for students in this group (onDelete: SetNull).
 
     await prisma.group.delete({
       where: { id }

@@ -1,5 +1,6 @@
 const prisma = require('../utils/prisma');
 const qrService = require('../services/qr.service');
+const notificationService = require('../services/notification.service');
 
 exports.scanQR = async (req, res) => {
   const { qr_token } = req.body;
@@ -26,7 +27,7 @@ exports.scanQR = async (req, res) => {
   try {
     const studentProfile = await prisma.student.findUnique({
       where: { userId: studentId },
-      select: { id: true, groupId: true }
+      include: { user: { select: { name: true } } }
     });
 
     if (!studentProfile) {
@@ -42,7 +43,8 @@ exports.scanQR = async (req, res) => {
           take: 1
         },
         group: true,
-        lab: true
+        lab: true,
+        professor: { select: { userId: true } }
       }
     });
 
@@ -53,38 +55,43 @@ exports.scanQR = async (req, res) => {
 
     const qrRecord = session.qrCodes[0];
 
+    // Sequence Diagram Step 4 : Check Revocation
     if (qrRecord && qrRecord.isRevoked) {
-      await logUnauthorizedAttempt(studentProfile.id, sessionId, session.labId, qr_token, 'QR Code was revoked (Session closed)');
-      return res.status(403).json({ message: 'This QR code has been revoked. The session may be closed.' });
+      await logUnauthorizedAttempt(studentProfile.id, sessionId, session.labId, qr_token, 'QR Code was revoked');
+      return res.status(400).json({ message: 'QR Code is revoked' });
     }
 
+    // Sequence Diagram Step 4 : Check Expiry
     const now = new Date();
     if (qrRecord) {
       if (now < qrRecord.validFrom || now > qrRecord.validUntil) {
-        await logUnauthorizedAttempt(studentProfile.id, sessionId, session.labId, qr_token, 'Scan outside valid time window');
-        return res.status(403).json({ 
-          message: 'Scan failed: Outside valid time window',
-          details: `Valid from ${qrRecord.validFrom} to ${qrRecord.validUntil}`
-        });
+        await logUnauthorizedAttempt(studentProfile.id, sessionId, session.labId, qr_token, 'QR Code expired');
+        return res.status(400).json({ message: 'QR Code expired' });
       }
     }
 
-    if (now < session.startTime || now > session.endTime) {
-      await prisma.unauthorizedAccessLog.create({
-        data: {
-          sessionId: session.id,
-          studentId,
-          labId: session.labId,
-          reason: now < session.startTime ? 'SESSION_NOT_STARTED' : 'SESSION_ENDED',
-          occurredAt: now
-        }
-      });
-
-      return res.status(403).json({ 
-        message: 'This session is not currently active.' 
-      });
+    // Sequence Diagram Step 5 : Check Session Status
+    if (session.status !== 'ACTIVE') {
+      await logUnauthorizedAttempt(studentProfile.id, sessionId, session.labId, qr_token, 'Session is not active');
+      return res.status(400).json({ message: 'Session is not active' });
     }
 
+    // Sequence Diagram Step 6 : Check Student Group
+    if (studentProfile.groupId !== session.groupId) {
+      await logUnauthorizedAttempt(
+        studentProfile.id, 
+        sessionId, 
+        session.labId, 
+        qr_token, 
+        'Wrong group',
+        session.professor.userId,
+        studentProfile.user.name,
+        session.courseName
+      );
+      return res.status(403).json({ message: "You don't belong to this group" });
+    }
+
+    // Sequence Diagram Step 7 : Check Duplicate
     const existingAttendance = await prisma.attendance.findUnique({
       where: {
         sessionId_studentId: {
@@ -95,12 +102,10 @@ exports.scanQR = async (req, res) => {
     });
 
     if (existingAttendance) {
-      return res.status(200).json({ 
-        message: 'You have already checked in for this session',
-        attendance: existingAttendance 
-      });
+      return res.status(409).json({ message: 'Already registered' });
     }
 
+    // Sequence Diagram Step 8 : Record Attendance
     const attendance = await prisma.attendance.create({
       data: {
         sessionId,
@@ -125,17 +130,17 @@ exports.scanQR = async (req, res) => {
       message: 'Attendance recorded successfully',
       attendance: {
         id: attendance.id,
-        courseName: attendance.session.courseName,
-        checkInAt: attendance.checkInAt
+        checkInAt: attendance.checkInAt,
+        session: {
+            courseName: session.courseName,
+            laboratory: session.lab.name,
+            group: session.group.name
+        }
       }
     });
 
   } catch (error) {
     console.error('Scan QR Error:', error.message);
-    if (studentId) {
-       const sProf = await prisma.student.findUnique({ where: { userId: studentId }});
-       if(sProf) await logUnauthorizedAttempt(sProf.id, sessionId, null, qr_token, `System Error: ${error.message}`);
-    }
     res.status(500).json({ message: 'Failed to process scan', error: error.message });
   }
 };
@@ -178,10 +183,9 @@ exports.getMyAttendances = async (req, res) => {
   }
 };
 
-async function logUnauthorizedAttempt(studentId, sessionId, labId, scannedToken, reason) {
+async function logUnauthorizedAttempt(studentId, sessionId, labId, scannedToken, reason, professorUserId, studentName, courseName) {
   try {
-
-    await prisma.unauthorizedAccessLog.create({
+    const log = await prisma.unauthorizedAccessLog.create({
       data: {
         studentId,
         sessionId,
@@ -191,6 +195,37 @@ async function logUnauthorizedAttempt(studentId, sessionId, labId, scannedToken,
         occurredAt: new Date()
       }
     });
+
+    // Sequence Diagram Step 6 : Notify Professor and Admins
+    if (reason === 'Wrong group' && professorUserId) {
+        // Notify Professor
+        await notificationService.createAndSendNotification(professorUserId, {
+            title: "⚠️ Accès non autorisé",
+            body: `${studentName} a tenté d'accéder à votre séance : ${courseName}`,
+            type: "UNAUTHORIZED_ACCESS",
+            data: { studentId, sessionId, reason }
+        });
+
+        // Notify Admins
+        const admins = await prisma.admin.findMany({ select: { userId: true } });
+        for (const admin of admins) {
+            await notificationService.createAndSendNotification(admin.userId, {
+                title: "🚨 Alerte sécurité",
+                body: `Tentative d'accès non autorisé détectée : ${courseName}.`,
+                type: "UNAUTHORIZED_ACCESS",
+                data: { studentId, sessionId, reason }
+            });
+        }
+
+        // Sequence Diagram Requirement: Update timestamps in log
+        await prisma.unauthorizedAccessLog.update({
+            where: { id: log.id },
+            data: {
+                professorNotifiedAt: new Date(),
+                adminNotifiedAt: new Date()
+            }
+        });
+    }
   } catch (err) {
     console.error('Failed to log unauthorized attempt:', err.message);
   }
