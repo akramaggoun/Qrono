@@ -27,6 +27,11 @@ enum AttendanceMethod {
   manual
 }
 
+enum SessionStatus {
+  ACTIVE
+  CLOSED
+}
+
 // ─────────────────────────────────────────────
 // CORE TABLES
 // ─────────────────────────────────────────────
@@ -54,7 +59,8 @@ model User {
 model Group {
   id        String   @id @default(uuid())
   name      String
-  yearLevel Int?     @map("year_level")
+  yearLevel String?  @map("year_level")
+  specialty String?
   createdAt DateTime @default(now()) @map("created_at")
 
   // Relations
@@ -68,7 +74,7 @@ model Laboratory {
   id         String   @id @default(uuid())
   name       String
   building   String?
-  roomNumber String?  @map("room_number")
+  roomNumber String?  @unique @map("room_number")
   capacity   Int?
   isActive   Boolean  @default(true) @map("is_active")
   createdAt  DateTime @default(now()) @map("created_at")
@@ -141,8 +147,9 @@ model Session {
   recurrence  Json?                        // {"days":["MON","WED"],"until":"2025-06-30"}
   professorId String   @map("professor_id")
   groupId     String   @map("group_id")
-  labId       String   @map("lab_id")
-  createdAt   DateTime @default(now()) @map("created_at")
+  labId       String        @map("lab_id")
+  status      SessionStatus @default(ACTIVE)
+  createdAt   DateTime      @default(now()) @map("created_at")
 
   // Relations
   professor        Professor               @relation(fields: [professorId], references: [id], onDelete: Cascade)
