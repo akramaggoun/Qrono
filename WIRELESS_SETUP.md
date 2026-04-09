@@ -9,7 +9,46 @@ This guide explains how to set up wireless QR code scanning for the Qrono attend
 - `cloudflared` installed on the professor's computer
 - Backend server running
 
-## Step-by-Step Setup
+## 🚀 Automated Setup (Recommended)
+
+### One-Command Setup
+The easiest way to set up wireless access is using the automated script:
+
+**Windows:**
+```cmd
+cd devops\tunnel
+setup-tunnel.bat
+```
+
+**Linux/Mac:**
+```bash
+cd devops/tunnel
+./setup-tunnel.sh
+```
+
+**Or using npm:**
+```bash
+npm run tunnel:setup
+```
+
+### What the Automated Script Does:
+1. ✅ Checks if `cloudflared` is installed
+2. ✅ Handles Cloudflare authentication (opens browser)
+3. ✅ Creates the tunnel automatically
+4. ✅ Prompts for your domain name
+5. ✅ Configures DNS routing
+6. ✅ Updates configuration files
+7. ✅ Provides final setup instructions
+
+### After Automated Setup:
+1. **Start the tunnel:**
+   ```bash
+   npm run tunnel:start  # or setup-tunnel.bat on Windows
+   ```
+
+2. **Configure student apps** with the provided wireless URL
+
+## 📋 Manual Setup (Advanced Users)
 
 ### 1. Install cloudflared
 ```bash
@@ -123,6 +162,19 @@ Student Phone ──HTTPS──► Cloudflare Tunnel ──HTTP──► Profess
 ```
 
 ## Cost
-- Cloudflare Tunnel is free for basic usage
-- Domain name may have minimal cost
+- Cloudflare Tunnel is **free** for basic usage
+- Domain name may have minimal cost (or free with some services)
 - No additional server costs required
+
+## Quick Start Summary
+
+**For Professors:**
+1. Run: `npm run tunnel:setup`
+2. Follow prompts (enter your domain)
+3. Run: `npm run tunnel:start`
+4. Share the wireless URL with students
+
+**For Students:**
+1. Open app → Settings (⚙️) → Wireless mode
+2. Enter professor's tunnel URL
+3. Scan QR codes wirelessly! 🎉
