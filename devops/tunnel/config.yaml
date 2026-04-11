@@ -1,5 +1,6 @@
-tunnel: qrono-tunnel
-credentials-file: ./credentials.json
+# Replace <TUNNEL_ID> with your actual tunnel ID from: cloudflared tunnel list
+tunnel: <TUNNEL_ID>
+credentials-file: ./<TUNNEL_ID>.json
 
 ingress:
   # Backend API

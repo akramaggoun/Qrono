@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../storage/token_storage.dart';
-import '../constants/api_constants.dart';
+import '../config/api_config.dart';
 
 class ApiClient {
   Future<Map<String, String>> get _headers async {
@@ -20,7 +20,7 @@ class ApiClient {
 
   Future<http.Response> get(String path) async {
     final headers = await _headers;
-    final url = path.startsWith('http') ? path : '${ApiConstants.baseUrl}$path';
+    final url = path.startsWith('http') ? path : '${ApiConfig.baseUrl}$path';
     final token = headers['Authorization'];
 
     print('🌐 REQUEST: GET $url');
@@ -33,7 +33,7 @@ class ApiClient {
 
   Future<http.Response> post(String path, dynamic body) async {
     final headers = await _headers;
-    final url = path.startsWith('http') ? path : '${ApiConstants.baseUrl}$path';
+    final url = path.startsWith('http') ? path : '${ApiConfig.baseUrl}$path';
     final token = headers['Authorization'];
 
     print('🌐 REQUEST: POST $url');
@@ -52,7 +52,7 @@ class ApiClient {
 
   Future<http.Response> put(String path, dynamic body) async {
     final headers = await _headers;
-    final url = path.startsWith('http') ? path : '${ApiConstants.baseUrl}$path';
+    final url = path.startsWith('http') ? path : '${ApiConfig.baseUrl}$path';
     
     print('🌐 REQUEST: PUT $url');
     print('📦 BODY: $body');
@@ -68,7 +68,7 @@ class ApiClient {
 
   Future<http.Response> patch(String path, dynamic body) async {
     final headers = await _headers;
-    final url = path.startsWith('http') ? path : '${ApiConstants.baseUrl}$path';
+    final url = path.startsWith('http') ? path : '${ApiConfig.baseUrl}$path';
     
     print('🌐 REQUEST: PATCH $url');
     
@@ -83,7 +83,7 @@ class ApiClient {
 
   Future<http.Response> delete(String path) async {
     final headers = await _headers;
-    final url = path.startsWith('http') ? path : '${ApiConstants.baseUrl}$path';
+    final url = path.startsWith('http') ? path : '${ApiConfig.baseUrl}$path';
     
     print('🌐 REQUEST: DELETE $url');
     

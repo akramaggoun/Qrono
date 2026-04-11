@@ -60,6 +60,7 @@ mobile/flutter_app/ios/Flutter/Flutter.podspec
 # CLOUDFLARE TUNNEL
 # =========================================
 devops/tunnel/credentials.json
+devops/tunnel/*.json
 devops/tunnel/*.log
 
 # =========================================

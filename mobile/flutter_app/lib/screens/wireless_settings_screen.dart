@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import '../core/config/api_config.dart';
 import '../core/constants/api_constants.dart';
 import '../core/constants/app_colors.dart';
-import '../providers/auth_provider.dart';
 
 class WirelessSettingsScreen extends StatefulWidget {
   const WirelessSettingsScreen({super.key});
@@ -18,8 +17,8 @@ class _WirelessSettingsScreenState extends State<WirelessSettingsScreen> {
   @override
   void initState() {
     super.initState();
-    _isWirelessMode = ApiConstants.isWirelessAccess;
-    _tunnelUrlController.text = _isWirelessMode ? ApiConstants.baseUrl : '';
+    _isWirelessMode = ApiConfig.isWirelessAccess;
+    _tunnelUrlController.text = _isWirelessMode ? ApiConfig.baseUrl : '';
   }
 
   @override
@@ -28,14 +27,14 @@ class _WirelessSettingsScreenState extends State<WirelessSettingsScreen> {
     super.dispose();
   }
 
-  void _toggleConnectionMode(bool isWireless) {
+  void _toggleConnectionMode(bool? isWireless) {
+    if (isWireless == null) return;
     setState(() {
       _isWirelessMode = isWireless;
     });
 
     if (!isWireless) {
-      // Switch to local mode
-      _showRestartDialog('Local Network', 'http://localhost:3000/api');
+      _showRestartDialog('Local Network', ApiConstants.defaultBaseUrl);
     }
   }
 
@@ -69,7 +68,7 @@ class _WirelessSettingsScreenState extends State<WirelessSettingsScreen> {
           children: [
             Text('New API URL: $url'),
             const SizedBox(height: 10),
-            const Text('The app will need to restart to apply changes.'),
+            const Text('Changes apply immediately, but restarting is recommended if you are already logged in.'),
             const SizedBox(height: 10),
             const Text('Make sure the backend is accessible at this URL.'),
           ],
@@ -82,11 +81,7 @@ class _WirelessSettingsScreenState extends State<WirelessSettingsScreen> {
           ElevatedButton(
             onPressed: () {
               Navigator.of(context).pop();
-              // Here you would typically save the setting and restart the app
-              // For now, just show a message
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Switched to $mode mode. Please restart the app.')),
-              );
+              _persistAndNotify(mode, url);
             },
             child: const Text('Apply & Restart'),
           ),
@@ -95,12 +90,25 @@ class _WirelessSettingsScreenState extends State<WirelessSettingsScreen> {
     );
   }
 
+  Future<void> _persistAndNotify(String mode, String url) async {
+    if (mode.startsWith('Local')) {
+      await ApiConfig.resetToDefault();
+    } else {
+      await ApiConfig.setBaseUrl(url);
+    }
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('✅ Saved $mode API URL. Restart app if you see old data.')),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Wireless Settings'),
-        backgroundColor: AppColors.primary,
+        backgroundColor: AppColors.primaryTeal,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -159,7 +167,7 @@ class _WirelessSettingsScreenState extends State<WirelessSettingsScreen> {
                 child: ElevatedButton(
                   onPressed: _applyWirelessSettings,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
+                    backgroundColor: AppColors.primaryTeal,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
                   child: const Text('Apply Wireless Settings'),

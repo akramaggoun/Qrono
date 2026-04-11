@@ -37,4 +37,4 @@ echo Press Ctrl+C to stop
 echo.
 
 REM Start the tunnel
-cloudflared tunnel run qrono-tunnel
+cloudflared tunnel --config config.yaml run qrono-tunnel

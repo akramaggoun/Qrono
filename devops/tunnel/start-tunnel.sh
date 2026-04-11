@@ -34,4 +34,4 @@ echo "Press Ctrl+C to stop"
 echo ""
 
 # Start the tunnel
-cloudflared tunnel run qrono-tunnel
+cloudflared tunnel --config config.yaml run qrono-tunnel

@@ -1,13 +1,13 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import '../core/constants/api_constants.dart';
 import '../core/network/api_client.dart';
 import '../models/notification_model.dart';
-import 'package:socket_io_client/socket_io_client.dart' as IO;
+import '../core/config/api_config.dart';
+import 'package:socket_io_client/socket_io_client.dart' as io;
 
 class NotificationProvider extends ChangeNotifier {
   final _apiClient = ApiClient();
-  IO.Socket? _socket;
+  io.Socket? _socket;
 
   List<NotificationModel> _notifications = [];
   bool _isLoading = false;
@@ -24,22 +24,19 @@ class NotificationProvider extends ChangeNotifier {
   void initSocket(String userId) {
     if (_socket != null) return;
 
-    // Use dynamic base URL for wireless access support
-    final socketUrl = ApiConstants.isWirelessAccess
-        ? ApiConstants.baseUrl.replaceAll('/api', '')  // Remove /api suffix
-        : 'http://localhost:3000';  // Default for local development
+    final socketUrl = ApiConfig.socketBaseUrl;
 
     print('📡 Connecting to Notification Socket for user: $userId');
-    print('🌐 Socket URL: $socketUrl (${ApiConstants.connectionType})');
+    print('🌐 Socket URL: $socketUrl (${ApiConfig.connectionType})');
 
-    _socket = IO.io(socketUrl, IO.OptionBuilder()
+    _socket = io.io(socketUrl, io.OptionBuilder()
       .setTransports(['websocket'])
       .setQuery({'userId': userId})
       .enableAutoConnect()
       .build());
 
     _socket!.onConnect((_) {
-      print('✅ Connected to Notification Server (${ApiConstants.connectionType})');
+      print('✅ Connected to Notification Server (${ApiConfig.connectionType})');
     });
 
     _socket!.on('notification:new', (data) {

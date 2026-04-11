@@ -3,7 +3,43 @@
 ## Overview
 This guide explains how to set up wireless QR code scanning for the Qrono attendance system using Cloudflare Tunnel. This allows students to scan QR codes from any device without being on the same local network as the professor's computer.
 
-## Prerequisites
+## 🧑‍💻 For Contributors — Quick Test (No Cloudflare Account Needed)
+
+If you just want to **test the wireless features locally**, you don't need a Cloudflare account or a domain name. Use the free **quick tunnel**:
+
+### Step 1: Install cloudflared
+Download from https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/tunnel-guide/
+
+### Step 2: Start the backend
+```bash
+cd backend
+npm install
+npm start          # Starts on http://localhost:3000
+```
+
+### Step 3: Start a quick tunnel
+```bash
+cloudflared tunnel --url http://localhost:3000
+```
+
+Cloudflared will print a random public URL like:
+```
+https://fixed-streets-aluminium-salary.trycloudflare.com
+```
+
+### Step 4: Configure the Flutter app
+- **Chrome/Web**: In the app, go to **Settings ⚙️ → Wireless (Cloudflare Tunnel)** and paste the URL above.
+- **Android/iOS**: Same steps on the device's app.
+- The app auto-appends `/api` — just paste the base URL.
+
+### Step 5: Test
+Open your tunnel URL in a browser — you should see the API respond. Then test QR scanning in the app.
+
+> **⚠️ Note:** Quick tunnels generate a **new random URL every time** you restart `cloudflared`. They're great for testing but not for permanent use. For production, follow the full setup below.
+
+---
+
+## Prerequisites (Full Setup)
 - Cloudflare account
 - Domain name (can use Cloudflare's free tier)
 - `cloudflared` installed on the professor's computer
@@ -109,9 +145,9 @@ cd devops/tunnel
 1. Open the app on the student's phone
 2. Go to Settings (gear icon in top right)
 3. Select "Wireless (Cloudflare Tunnel)"
-4. Enter your tunnel URL: `https://qrono-api.your-subdomain.yourdomain.com/api`
+4. Enter your tunnel URL: `https://qrono-api.your-subdomain.yourdomain.com` (the app will auto-append `/api` if missing)
 5. Tap "Apply Wireless Settings"
-6. Restart the app
+6. Restart the app (recommended if already logged in)
 
 ## Testing the Setup
 

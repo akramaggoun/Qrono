@@ -1,15 +1,16 @@
+// Load .env before any module that uses Prisma (DATABASE_URL must exist first).
+require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
-const dotenv = require('dotenv');
 const { createServer } = require('http');
 const notificationService = require('./services/notification.service');
+const prisma = require('./utils/prisma');
 
 const app = express();
 const httpServer = createServer(app);
 
 notificationService.init(httpServer);
-
-dotenv.config();
 
 // Enhanced CORS configuration for wireless access
 const corsOptions = {
@@ -65,6 +66,21 @@ app.use('/api/presences', require('./routes/presence.routes'));
 
 app.use('/api/notifications', require('./routes/notification.routes'));
 
+// Health check including real PostgreSQL connectivity (Prisma)
+app.get('/api/health', async (req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.json({ ok: true, database: 'postgresql', status: 'connected' });
+  } catch (e) {
+    res.status(503).json({
+      ok: false,
+      database: 'postgresql',
+      status: 'disconnected',
+      message: process.env.NODE_ENV === 'development' ? e.message : 'Database unavailable',
+    });
+  }
+});
+
 app.use((err, req, res, next) => {
   console.error('Global Error:', err.stack);
   res.status(500).json({ 
@@ -74,11 +90,20 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 3000;
-httpServer.listen(PORT, () => {
+httpServer.listen(PORT, async () => {
   console.log(`🚀 Qrono Backend running on http://localhost:${PORT}`);
   console.log(`🌐 Wireless Access: Configure Cloudflare tunnel for remote QR scanning`);
-  console.log(`📱 Mobile App: Update API constants to use tunnel URL when needed`);
+  console.log(`📱 Mobile App: Wireless Settings screen sets the tunnel API URL`);
   console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`📊 Database: ${process.env.DATABASE_URL ? 'Connected' : 'Not configured'}`);
-});
+  if (!process.env.DATABASE_URL) {
+    console.log('📊 Database: Not configured (set DATABASE_URL in backend/.env)');
+  } else {
+    try {
+      await prisma.$connect();
+      console.log('📊 Database: Connected to PostgreSQL');
+    } catch (e) {
+      console.error('📊 Database: FAILED to connect to PostgreSQL:', e.message);
+      console.error('   Fix DATABASE_URL in backend/.env and ensure PostgreSQL is running.');
+    }
+  }
 });

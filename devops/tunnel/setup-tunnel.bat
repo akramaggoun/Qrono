@@ -21,22 +21,26 @@ set "TUNNEL_NAME=qrono-tunnel"
 set "CONFIG_FILE=config.yaml"
 set "CREDENTIALS_FILE=credentials.json"
 
+goto :main
+
 REM Function to print status messages
 :print_status
 echo ✅ %~1
-goto :eof
+exit /b 0
 
 :print_warning
 echo ⚠️  %~1
-goto :eof
+exit /b 0
 
 :print_error
 echo ❌ %~1
-goto :eof
+exit /b 0
 
 :print_info
 echo ℹ️  %~1
-goto :eof
+exit /b 0
+
+:main
 
 REM Step 1: Check prerequisites
 echo.
