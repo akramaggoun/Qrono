@@ -4,8 +4,12 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { createServer } = require('http');
+
+dotenv.config();
+
 const notificationService = require('./services/notification.service');
 const prisma = require('./utils/prisma');
+const globalLimiter = require('./middleware/rate-limiter.middleware');
 
 const app = express();
 const httpServer = createServer(app);
@@ -42,7 +46,9 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
+app.use(cors());
 app.use(express.json());
+app.use('/api/', globalLimiter);
 
 app.use((req, res, next) => {
   const fullPath = req.originalUrl || req.url;
