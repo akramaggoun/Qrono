@@ -5,8 +5,6 @@ const express = require('express');
 const cors = require('cors');
 const { createServer } = require('http');
 
-dotenv.config();
-
 const notificationService = require('./services/notification.service');
 const prisma = require('./utils/prisma');
 const globalLimiter = require('./middleware/rate-limiter.middleware');
