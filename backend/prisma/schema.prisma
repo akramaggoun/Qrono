@@ -70,6 +70,20 @@ model Group {
   @@map("groups")
 }
 
+model Schedule {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  sessions Session[]
+
+  @@map("schedules")
+}
+
 model Laboratory {
   id         String   @id @default(uuid())
   name       String
@@ -145,6 +159,7 @@ model Session {
   endTime     DateTime @map("end_time")
   isRecurring Boolean  @default(false) @map("is_recurring")
   recurrence  Json?                        // {"days":["MON","WED"],"until":"2025-06-30"}
+  scheduleId  String?  @map("schedule_id")
   professorId String   @map("professor_id")
   groupId     String   @map("group_id")
   labId       String        @map("lab_id")
@@ -155,6 +170,7 @@ model Session {
   professor        Professor               @relation(fields: [professorId], references: [id], onDelete: Cascade)
   group            Group                   @relation(fields: [groupId], references: [id], onDelete: Cascade)
   lab              Laboratory              @relation(fields: [labId], references: [id], onDelete: Cascade)
+  schedule         Schedule?               @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
   qrCodes          QrCode[]
   attendance       Attendance[]
   unauthorizedLogs UnauthorizedAccessLog[]
