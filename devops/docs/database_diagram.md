@@ -19,69 +19,48 @@
    │ user_id(FK)│ │ user_id (FK) │ │ user_id (FK) │
    │ urn UNIQUE │ │ email UNIQUE │ │ email UNIQUE │
    │ student_cod│ │ professor_cod│ │ created_at   │
-   │ group_id   │ │ department   │ └──────────────┘
-   └─────┬──────┘ └──────┬───────┘
-         │               │
-         │ N:1           │ 1:N
-         ▼               ▼
-   ┌──────────┐    ┌─────────────────────────────────────────┐
-   │  GROUPS  │    │                SESSIONS                  │
-   │──────────│◄───│─────────────────────────────────────────│
-      │ id (PK)  │    │ id (PK)  · course_name                  │
-      │          │    │ schedule_id (FK) → SCHEDULES            │
-   │ name     │    │ professor_id (FK) → PROFESSORS           │
-   │ year_lev │    │ group_id    (FK) → GROUPS               │
-   └──────────┘    │ lab_id      (FK) → LABORATORIES         │
-                   │ start_time · end_time · is_recurring     │
-                   └───────────┬─────────────────────────────┘
-                               │ 1:N
-              ┌────────────────┼────────────────┐
-              │                │                │
-              ▼                ▼                ▼
-       ┌────────────┐  ┌────────────┐  ┌────────────────────────┐
-       │  QR_CODES  │  │ ATTENDANCE │  │ UNAUTHORIZED_ACCESS    │
-       │────────────│  │────────────│  │ _LOGS                  │
-       │ id (PK)    │  │ id (PK)    │  │────────────────────────│
-       │ session_id │  │ session_id │  │ id (PK)                │
-       │ token      │  │ student_id │  │ student_id (FK)        │
-       │ valid_from │  │ qr_code_id │  │ session_id (FK)        │
-       │ valid_until│  │ recorded_by│  │ lab_id (FK)            │
-       │ is_revoked │  │ check_in_at│  │ scanned_token          │
-       └────────────┘  │ method     │  │ reason                 │
-                       └────────────┘  │ occurred_at            │
-                                       └────────────────────────┘
+   │ group_id   │ │ department   │ └──────┬───────┘
+   └─────┬──────┘ └──────┬───────┘        │
+         │               │                │ 1:N (creates)
+         │ N:1           │                │
+         │               │    ┌───────────┘
+         │               │    │
+         ▼               ▼    ▼
+   ┌──────────┐    ┌──────────────────────┐
+   │  GROUPS  │    │     SCHEDULES        │
+   │──────────│◄───│──────────────────────│
+   │ id (PK)  │    │ id (PK)              │
+   │ name     │    │ name                 │
+   │ year_lev │    │ description          │
+   └──────────┘    │ created_by_admin_id  │
+                   │ professor_id (FK)    │
+                   │ is_active            │
+                   └──────────┬───────────┘
+                              │ 1:N
+                              ▼
+                      ┌──────────────────────────────┐
+                      │       SESSIONS               │
+                      │──────────────────────────────│
+                      │ id (PK) · course_name       │
+                      │ schedule_id (FK) → SCHEDULES │
+                      │ professor_id (FK) →...      │
+                      │ group_id (FK) → GROUPS      │
+                      │ lab_id (FK) → LABS          │
+                      └───────────┬──────────────────┘
+                                  │ 1:N
+                   ┌──────────────┼──────────────┐
+                   │              │              │
+                   ▼              ▼              ▼
+            ┌────────────┐ ┌────────────┐ ┌─────────────────┐
+            │  QR_CODES  │ │ ATTENDANCE │ │ UNAUTHORIZED... │
+            └────────────┘ └────────────┘ │ ACCESS_LOGS     │
+                                          └─────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────────┐
 │                         LABORATORIES                                │
 │─────────────────────────────────────────────────────────────────────│
 │ id (PK)  · name  · building  · room_number  · capacity  · is_active │
 └─────────────────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────────────────┐
-│                           SCHEDULES                                 │
-│─────────────────────────────────────────────────────────────────────│
-│ id (PK)  · name  · description  · is_active  · created_at          │
-└──────────────────────────────┬──────────────────────────────────────┘
-                                             │ 1:N
-                                             ▼
-                                       SESSIONS
-
-┌─────────────────────────────────────────────────────────────────────┐
-│                         NOTIFICATIONS                               │
-│─────────────────────────────────────────────────────────────────────│
-│ id (PK)  · user_id (FK → users)  · type  · title  · body  · is_read│
-└─────────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## All Tables
-
-### 1. users
-Base authentication table. Holds all three roles.
-
-| Column | Type | Notes |
-|---|---|---|
 | id | uuid | Primary key |
 | name | varchar(255) | Full name |
 | password | varchar(255) | bcrypt hash — never plain text |
@@ -161,13 +140,15 @@ Physical lab rooms.
 ---
 
 ### 7. schedules
-Named containers for a set of sessions, such as a weekly timetable or course plan.
+Named containers for a set of sessions, created by admins and assigned to professors to manage their lab timetable.
 
 | Column | Type | Notes |
 |---|---|---|
 | id | uuid | Primary key |
-| name | varchar(255) | Schedule title |
+| name | varchar(255) | Schedule title (e.g., "Spring 2026 L3 Info G1") |
 | description | text | Optional description |
+| created_by_admin_id | uuid | FK → users (CASCADE) — which admin created it |
+| professor_id | uuid | FK → professors (CASCADE) — professor who manages this schedule |
 | is_active | boolean | False = schedule disabled |
 | created_at | timestamp | Auto set on insert |
 | updated_at | timestamp | Auto updated on change |
@@ -175,7 +156,7 @@ Named containers for a set of sessions, such as a weekly timetable or course pla
 ---
 
 ### 8. sessions
-Scheduled lab sessions (the timetable).
+Scheduled lab sessions (the timetable), grouped within schedules.
 
 | Column | Type | Notes |
 |---|---|---|
@@ -185,10 +166,11 @@ Scheduled lab sessions (the timetable).
 | end_time | timestamp | Session end (must be after start) |
 | is_recurring | boolean | True = repeating session |
 | recurrence | jsonb | e.g. `{"days":["MON","WED"],"until":"2025-06-30"}` |
-| schedule_id | uuid | FK → schedules (SET NULL on delete) |
+| schedule_id | uuid | FK → schedules (SET NULL on delete) — which schedule contains this session |
 | professor_id | uuid | FK → professors (NOT NULL, CASCADE) |
 | group_id | uuid | FK → groups (NOT NULL, CASCADE) |
 | lab_id | uuid | FK → laboratories (NOT NULL, CASCADE) |
+| status | enum | `ACTIVE` \| `CLOSED` |
 | created_at | timestamp | Auto set on insert |
 
 **Constraint:** `end_time > start_time`

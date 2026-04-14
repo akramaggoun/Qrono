@@ -71,15 +71,19 @@ model Group {
 }
 
 model Schedule {
-  id          String   @id @default(uuid())
-  name        String
-  description String?
-  isActive    Boolean  @default(true) @map("is_active")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id                String   @id @default(uuid())
+  name              String
+  description       String?
+  isActive          Boolean  @default(true) @map("is_active")
+  createdByAdminId  String   @map("created_by_admin_id")
+  professorId       String   @map("professor_id")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
 
   // Relations
-  sessions Session[]
+  admin     Admin     @relation(fields: [createdByAdminId], references: [userId], onDelete: Cascade)
+  professor Professor @relation(fields: [professorId], references: [id], onDelete: Cascade)
+  sessions  Session[]
 
   @@map("schedules")
 }
@@ -130,8 +134,9 @@ model Professor {
   createdAt      DateTime @default(now()) @map("created_at")
 
   // Relations
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  sessions Session[]
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessions  Session[]
+  schedules Schedule[]
 
   @@map("professors")
 }
@@ -143,7 +148,8 @@ model Admin {
   createdAt DateTime @default(now()) @map("created_at")
 
   // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  schedules Schedule[]
 
   @@map("admins")
 }
