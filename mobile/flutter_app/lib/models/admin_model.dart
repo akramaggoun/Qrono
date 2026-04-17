@@ -10,7 +10,7 @@ class AdminModel extends UserModel {
     required super.createdAt,
     required super.email,
     super.phone,
-  }) : super(role: 'admin');
+  }) : super(role: UserRole.admin);
 
   factory AdminModel.fromJson(Map<String, dynamic> json) {
     return AdminModel(

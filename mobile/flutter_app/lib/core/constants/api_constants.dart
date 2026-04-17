@@ -1,6 +1,13 @@
+import 'package:flutter/foundation.dart';
+
 class ApiConstants {
-  static const String baseUrl = 'http://10.0.2.2:3000/api';
+  // FINAL SOLUTION: Using "Physical ADB Bridge" via USB.
+  // This maps the phone's port 3000 to the computer's port 3000.
+  // 100% Stable, No Internet required, No Firebase lag.
   
+  static const String baseUrl = 'http://localhost:3000/api'; 
+
   // Auth endpoints
-  static const String login = '$baseUrl/auth/login';
+  static String get login => '$baseUrl/auth/login';
+  static String get logout => '$baseUrl/auth/logout';
 }

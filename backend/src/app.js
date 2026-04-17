@@ -1,6 +1,8 @@
+const dotenv = require('dotenv');
+dotenv.config();
+
 const express = require('express');
 const cors = require('cors');
-const dotenv = require('dotenv');
 const { createServer } = require('http');
 const notificationService = require('./services/notification.service');
 
@@ -9,16 +11,24 @@ const httpServer = createServer(app);
 
 notificationService.init(httpServer);
 
-dotenv.config();
-
 app.use(cors());
 app.use(express.json());
+
+app.use((req, res, next) => {
+  const fullPath = req.originalUrl || req.url;
+  console.log(`[REQUEST] ${req.method} ${fullPath}`);
+  res.on('finish', () => {
+    console.log(`[RESPONSE] ${req.method} ${fullPath} -> ${res.statusCode}`);
+  });
+  next();
+});
 
 app.use('/api/auth', require('./routes/auth.routes'));
 app.use('/api/users', require('./routes/user.routes'));
 
 app.use('/api/laboratories', require('./routes/laboratory.routes'));
 app.use('/api/groups', require('./routes/group.routes'));
+app.use('/api/schedules', require('./routes/schedule.routes'));
 app.use('/api/statistics', require('./routes/statistics.routes'));
 app.use('/api/unauthorized-logs', require('./routes/unauthorized.routes'));
 
@@ -36,7 +46,9 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 3000;
-httpServer.listen(PORT, () => {
-  console.log(`Qrono Backend running on http://localhost:${PORT}`);
+httpServer.listen(PORT, '0.0.0.0', () => {
+  console.log(`Qrono Backend running on http://0.0.0.0:${PORT}`);
+  console.log(`Accessible locally via: http://localhost:${PORT}`);
+  console.log(`Accessible from networks via: http://192.168.1.6:${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });

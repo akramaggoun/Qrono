@@ -7,6 +7,7 @@ const { checkRole } = require('../middleware/role.middleware');
 router.use(authMiddleware);
 
 router.get('/', checkRole(['admin', 'professor']), groupController.getAllGroups);
+router.get('/:id/students', checkRole(['admin', 'professor']), groupController.getGroupStudents);
 
 router.post('/', checkRole(['admin']), groupController.createGroup);
 router.put('/:id', checkRole(['admin']), groupController.updateGroup);

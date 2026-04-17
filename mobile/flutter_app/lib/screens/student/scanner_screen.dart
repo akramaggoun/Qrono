@@ -16,7 +16,6 @@ class ScannerScreen extends StatefulWidget {
 class _ScannerScreenState extends State<ScannerScreen> {
   final MobileScannerController controller = MobileScannerController();
   bool _isPermissionGranted = false;
-  bool _isCameraInitialized = false;
 
   @override
   void initState() {
@@ -27,9 +26,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
   Future<void> _checkPermission() async {
     final status = await Permission.camera.request();
     if (status.isGranted) {
-      setState(() {
-        _isPermissionGranted = true;
-      });
+      setState(() => _isPermissionGranted = true);
       _startCamera();
     } else if (status.isPermanentlyDenied) {
       openAppSettings();
@@ -39,11 +36,8 @@ class _ScannerScreenState extends State<ScannerScreen> {
   void _startCamera() async {
     try {
       await controller.start();
-      setState(() {
-        _isCameraInitialized = true;
-      });
     } catch (e) {
-      debugPrint('Error starting camera: $e');
+      debugPrint('Camera Error: $e');
     }
   }
 
@@ -59,25 +53,26 @@ class _ScannerScreenState extends State<ScannerScreen> {
       final String? code = barcodes.first.displayValue;
       if (code != null) {
         controller.stop();
-        
         final presenceProvider = Provider.of<PresenceProvider>(context, listen: false);
-        final success = await presenceProvider.scanQR(code); // UML Step 3-8
+        final success = await presenceProvider.scanQR(code);
 
         if (success && mounted) {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              builder: (context) => ConfirmPresenceScreen(
+              builder: (_) => ConfirmPresenceScreen(
                 attendanceData: presenceProvider.attendanceData!,
               ),
             ),
           );
         } else if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(presenceProvider.errorMessage ?? "Erreur de scan"),
-            backgroundColor: Colors.redAccent,
+            content: Text(presenceProvider.errorMessage ?? 'Verification Failed'),
+            backgroundColor: AppColors.danger,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            margin: const EdgeInsets.all(24),
           ));
-          // Redémarrer le scan après une brève pause
           Future.delayed(const Duration(seconds: 2), () {
             if (mounted) controller.start();
           });
@@ -90,97 +85,179 @@ class _ScannerScreenState extends State<ScannerScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text('Scanner QR Code', style: TextStyle(color: Colors.white)),
         backgroundColor: Colors.transparent,
         elevation: 0,
-        iconTheme: const IconThemeData(color: AppColors.primaryTeal),
+        centerTitle: true,
+        title: const Text('QR SCANNER', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 2)),
+        leading: IconButton(
+          icon: const Icon(Icons.close_rounded, color: Colors.white, size: 28),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
-      extendBodyBehindAppBar: true,
       body: Stack(
         children: [
-          _isPermissionGranted
-              ? MobileScanner(
-                  controller: controller,
-                  onDetect: _onDetect,
-                )
-              : Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.camera_alt_outlined, color: Colors.white, size: 64),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'Accès caméra requis pour scanner',
-                        style: TextStyle(color: Colors.white),
-                      ),
-                      const SizedBox(height: 24),
-                      ElevatedButton(
-                        onPressed: _checkPermission,
-                        child: const Text('ACCORDER L\'AUTORISATION'),
-                      ),
-                    ],
-                  ),
-                ),
-          
           if (_isPermissionGranted)
-            Center(
-              child: Container(
-                width: 250,
-                height: 250,
-                decoration: BoxDecoration(
-                  border: Border.all(color: AppColors.primaryTeal, width: 2),
-                  borderRadius: BorderRadius.circular(20),
+            MobileScanner(controller: controller, onDetect: _onDetect)
+          else
+            _buildPermissionPlaceholder(),
+
+          if (_isPermissionGranted) _buildScannerOverlay(),
+          
+          if (_isPermissionGranted) _buildActionControls(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPermissionPlaceholder() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(40),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(32),
+              decoration: BoxDecoration(color: Colors.white.withOpacity(0.05), shape: BoxShape.circle),
+              child: const Icon(Icons.camera_rounded, color: Colors.white, size: 64),
+            ),
+            const SizedBox(height: 32),
+            const Text('Camera Access Required', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900)),
+            const SizedBox(height: 12),
+            const Text(
+              'Please grant camera permission to scan attendance QR codes and verify your presence.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.white60, fontSize: 14, height: 1.6),
+            ),
+            const SizedBox(height: 40),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _checkPermission,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                 ),
+                child: const Text('GRANT ACCESS', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1)),
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
 
-          Positioned(
-            bottom: 50,
-            left: 0,
-            right: 0,
-            child: Column(
+  Widget _buildScannerOverlay() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 260,
+            height: 260,
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.white.withOpacity(0.1), width: 1),
+              borderRadius: BorderRadius.circular(40),
+            ),
+            child: Stack(
               children: [
-                const Text(
-                  'Placez le code QR dans le cadre',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    IconButton(
-                      icon: ValueListenableBuilder(
-                        valueListenable: controller,
-                        builder: (context, state, child) {
-                          switch (state.torchState) {
-                            case TorchState.on:
-                              return const Icon(Icons.flash_on, color: AppColors.primaryTeal);
-                            default:
-                              return const Icon(Icons.flash_off, color: Colors.white);
-                          }
-                        },
-                      ),
-                      onPressed: () => controller.toggleTorch(),
-                      iconSize: 32,
-                    ),
-                    const SizedBox(width: 40),
-                    IconButton(
-                      icon: const Icon(Icons.flip_camera_android, color: Colors.white),
-                      onPressed: () => controller.switchCamera(),
-                      iconSize: 32,
-                    ),
-                  ],
-                ),
+                ..._buildNeonCorners(),
               ],
             ),
           ),
+          const SizedBox(height: 48),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            decoration: BoxDecoration(color: Colors.black45, borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.white12)),
+            child: const Text(
+              'ALIGN QR CODE WITHIN THE FRAME',
+              style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 1.5),
+            ),
+          ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildActionControls() {
+    return Positioned(
+      bottom: 64,
+      left: 0,
+      right: 0,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          _buildGlassButton(
+            icon: ValueListenableBuilder(
+              valueListenable: controller,
+              builder: (context, state, child) {
+                return Icon(
+                  state.torchState == TorchState.on ? Icons.flash_on_rounded : Icons.flash_off_rounded,
+                  color: state.torchState == TorchState.on ? Colors.amber : Colors.white,
+                );
+              },
+            ),
+            onTap: () => controller.toggleTorch(),
+          ),
+          const SizedBox(width: 40),
+          _buildGlassButton(
+            icon: const Icon(Icons.flip_camera_ios_rounded, color: Colors.white),
+            onTap: () => controller.switchCamera(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGlassButton({required Widget icon, required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 64,
+        height: 64,
+        decoration: BoxDecoration(
+          color: Colors.white.withAlpha(30),
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white.withAlpha(50), width: 1),
+        ),
+        child: Center(child: icon),
+      ),
+    );
+  }
+
+  List<Widget> _buildNeonCorners() {
+    const size = 30.0;
+    const thickness = 4.0;
+    const radius = 40.0;
+
+    return [
+      Positioned(top: 0, left: 0, child: _corner(top: true, left: true, r: radius, s: size, t: thickness)),
+      Positioned(top: 0, right: 0, child: _corner(top: true, left: false, r: radius, s: size, t: thickness)),
+      Positioned(bottom: 0, left: 0, child: _corner(top: false, left: true, r: radius, s: size, t: thickness)),
+      Positioned(bottom: 0, right: 0, child: _corner(top: false, left: false, r: radius, s: size, t: thickness)),
+    ];
+  }
+
+  Widget _corner({required bool top, required bool left, required double r, required double s, required double t}) {
+    return Container(
+      width: s,
+      height: s,
+      decoration: BoxDecoration(
+        border: Border(
+          top: top ? BorderSide(color: AppColors.primary, width: t) : BorderSide.none,
+          bottom: !top ? BorderSide(color: AppColors.primary, width: t) : BorderSide.none,
+          left: left ? BorderSide(color: AppColors.primary, width: t) : BorderSide.none,
+          right: !left ? BorderSide(color: AppColors.primary, width: t) : BorderSide.none,
+        ),
+        borderRadius: BorderRadius.only(
+          topLeft: top && left ? Radius.circular(r) : Radius.zero,
+          topRight: top && !left ? Radius.circular(r) : Radius.zero,
+          bottomLeft: !top && left ? Radius.circular(r) : Radius.zero,
+          bottomRight: !top && !left ? Radius.circular(r) : Radius.zero,
+        ),
       ),
     );
   }

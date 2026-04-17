@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
-import 'notifications_screen.dart';
-import '../notification_screen.dart';
 import 'package:provider/provider.dart';
+import '../../core/constants/app_colors.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/notification_provider.dart';
+import '../../providers/presence_provider.dart';
 import '../auth/login_screen.dart';
-import '../../providers/admin_provider.dart';
-import '../../core/constants/app_colors.dart';
+import '../notification_screen.dart';
 import 'scanner_screen.dart';
 import 'my_attendance_screen.dart';
+import '../../models/attendance_model.dart';
 
 class StudentDashboard extends StatefulWidget {
   const StudentDashboard({super.key});
@@ -18,14 +18,18 @@ class StudentDashboard extends StatefulWidget {
 }
 
 class _StudentDashboardState extends State<StudentDashboard> {
-  final int _presentCount = 0;
-  final int _totalCount = 20;
-
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<NotificationProvider>(context, listen: false).fetchNotifications();
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final notifProvider = Provider.of<NotificationProvider>(context, listen: false);
+
+      if (authProvider.userId != null) {
+        notifProvider.initSocket(authProvider.userId!);
+      }
+      notifProvider.fetchNotifications();
+      Provider.of<PresenceProvider>(context, listen: false).fetchMyAttendances();
     });
   }
 
@@ -33,236 +37,277 @@ class _StudentDashboardState extends State<StudentDashboard> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Dashboard', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
-            Text('Student', style: TextStyle(fontSize: 11, color: AppColors.grayText)),
-          ],
-        ),
-        actions: [
-          IconButton(
-            tooltip: 'Logout',
-            icon: const Icon(Icons.logout, color: AppColors.primaryTeal),
-            onPressed: () => _showLogoutDialog(context),
-          ),
-          Consumer<NotificationProvider>(
-            builder: (context, provider, child) => Stack(
-              alignment: Alignment.center,
-              children: [
-                IconButton(
-                  tooltip: 'Notifications',
-                  icon: const Icon(Icons.notifications_none_outlined),
-                  onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationScreen())),
-                ),
-                if (provider.unreadCount > 0)
-                  Positioned(
-                    top: 10, right: 10,
-                    child: Container(
-                      padding: const EdgeInsets.all(2),
-                      decoration: const BoxDecoration(color: Colors.redAccent, shape: BoxShape.circle),
-                      constraints: const BoxConstraints(minWidth: 10, minHeight: 10),
-                      child: Text(
-                        provider.unreadCount > 9 ? '9+' : '${provider.unreadCount}',
-                        style: const TextStyle(color: Colors.white, fontSize: 7, fontWeight: FontWeight.bold),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
+      body: Consumer<PresenceProvider>(
+        builder: (context, presenceProvider, child) {
+          final authProvider = Provider.of<AuthProvider>(context);
+          final attendances = presenceProvider.myAttendances;
+
+          return CustomScrollView(
+            slivers: [
+              _buildSliverAppBar(authProvider),
+              SliverToBoxAdapter(
+                child: RefreshIndicator(
+                  onRefresh: () => presenceProvider.fetchMyAttendances(),
+                  child: Column(
+                    children: [
+                      _buildScanAction(),
+                      _buildAttendanceGoal(attendances),
+                      _buildRecentHistory(attendances),
+                      const SizedBox(height: 40),
+                    ],
                   ),
-              ],
-            ),
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildWelcomeHeader(),
-            const SizedBox(height: 25),
-            _buildScanQrCard(),
-            const SizedBox(height: 25),
-            _buildAttendanceProgress(),
-            const SizedBox(height: 25),
-            _buildSectionHeader('Recent Activity', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MyAttendanceScreen()))),
-            const SizedBox(height: 12),
-            // IHM: Empty state for recent activity
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 20),
-                child: Column(
-                  children: [
-                    Icon(Icons.history, color: AppColors.grayText, size: 40),
-                    SizedBox(height: 10),
-                    Text('No recent activity found', style: TextStyle(color: AppColors.grayText, fontSize: 13)),
-                  ],
                 ),
               ),
-            ),
-            const SizedBox(height: 20),
-          ],
-        ),
+            ],
+          );
+        },
       ),
     );
   }
 
-  Widget _buildWelcomeHeader() {
-    final authProvider = Provider.of<AuthProvider>(context);
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Welcome back 👋', style: TextStyle(fontSize: 14, color: AppColors.grayText)),
-            Text(authProvider.userName ?? 'Student', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black87)),
-          ],
+  Widget _buildSliverAppBar(AuthProvider auth) {
+    return SliverAppBar(
+      expandedHeight: 180,
+      pinned: true,
+      elevation: 0,
+      flexibleSpace: FlexibleSpaceBar(
+        background: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: AppColors.primaryGradient,
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          child: Stack(
+            children: [
+              Positioned(
+                right: -20,
+                bottom: -20,
+                child: Icon(Icons.qr_code_scanner, size: 200, color: Colors.white.withOpacity(0.05)),
+              ),
+              SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      const Text(
+                        'STUDENT PORTAL',
+                        style: TextStyle(color: Colors.white60, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 2),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Hello, ${auth.userName ?? "Student"}',
+                        style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
-        CircleAvatar(
-          radius: 24,
-          backgroundColor: AppColors.primaryTeal.withOpacity(0.1),
-          child: const Icon(Icons.person, color: AppColors.primaryTeal),
+      ),
+      actions: [
+        _buildNotifIcon(),
+        IconButton(
+          icon: const Icon(Icons.power_settings_new_rounded),
+          onPressed: () => _showLogoutDialog(context),
         ),
+        const SizedBox(width: 8),
       ],
     );
   }
 
-  Widget _buildScanQrCard() {
-    return InkWell(
-      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ScannerScreen())),
-      borderRadius: BorderRadius.circular(24),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [AppColors.primaryTeal, Color(0xFF00897B)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+  Widget _buildScanAction() {
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: GestureDetector(
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ScannerScreen())),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(colors: AppColors.primaryGradient),
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: AppColors.activeShadow,
           ),
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [BoxShadow(color: AppColors.primaryTeal.withOpacity(0.35), blurRadius: 20, offset: const Offset(0, 10))],
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(18)),
-              child: const Icon(Icons.qr_code_scanner, color: Colors.white, size: 36),
-            ),
-            const SizedBox(width: 18),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Scan QR Code', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 4),
-                  const Text('Tap to activate camera', style: TextStyle(color: Colors.white70, fontSize: 13)),
-                ],
+          child: const Row(
+            children: [
+              Icon(Icons.qr_code_scanner_rounded, color: Colors.white, size: 40),
+              SizedBox(width: 20),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('SCAN ATTENDANCE', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16)),
+                    Text('Point your camera at the lecture QR', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                  ],
+                ),
               ),
-            ),
-            const Icon(Icons.arrow_forward_ios, color: Colors.white70, size: 16),
-          ],
+              Icon(Icons.arrow_forward_ios_rounded, color: Colors.white38, size: 16),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildAttendanceProgress() {
-    double ratio = _totalCount > 0 ? (_presentCount / _totalCount) : 0.0;
-    Color progressColor = ratio >= 0.75 ? Colors.green : (ratio >= 0.5 ? Colors.orange : Colors.redAccent);
+  Widget _buildAttendanceGoal(List<AttendanceModel> attendances) {
+    final provider = Provider.of<PresenceProvider>(context, listen: false);
+    final stats = provider.attendanceData?['stats'];
+    
+    final totalSessions = stats?['totalSessions'] ?? attendances.length;
+    final attendedCount = stats?['attendedCount'] ?? attendances.length;
+    final absentCount = stats?['absentCount'] ?? 0;
+    
+    final double attendanceRate = double.tryParse(stats?['attendanceRate']?.toString() ?? '0') ?? 0;
+    final double absenceRate = totalSessions > 0 ? (absentCount / totalSessions) * 100 : 0;
+    final int percent = attendanceRate.toInt();
 
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppColors.cardColor,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.borderColor, width: 0.5),
-      ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Attendance Rate', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-              Text('This semester', style: TextStyle(fontSize: 12, color: AppColors.grayText)),
-            ],
-          ),
-          const SizedBox(height: 14),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: LinearProgressIndicator(
-              value: ratio,
-              backgroundColor: Colors.grey.shade200,
-              valueColor: AlwaysStoppedAnimation<Color>(progressColor),
-              minHeight: 10,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              RichText(
-                text: TextSpan(
+          const Text('PRESENCE ANALYTICS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: AppColors.textLight, letterSpacing: 1.5)),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24), boxShadow: AppColors.softShadow),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    TextSpan(text: '$_presentCount', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: progressColor)),
-                    const TextSpan(text: ' / 20 sessions', style: TextStyle(fontSize: 13, color: AppColors.grayText)),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('$percent%', style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: percent > 75 ? AppColors.success : AppColors.primary)),
+                        const Text('Personal Attendance Rate', style: TextStyle(fontSize: 12, color: AppColors.textLight)),
+                      ],
+                    ),
+                    const Icon(Icons.insights_rounded, color: AppColors.background, size: 48),
                   ],
                 ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(color: progressColor.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
-                child: Text('${(ratio * 100).round()}%', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: progressColor)),
-              ),
-            ],
+                const SizedBox(height: 20),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: LinearProgressIndicator(
+                    value: totalSessions > 0 ? (attendedCount / totalSessions) : 0,
+                    minHeight: 12,
+                    backgroundColor: AppColors.background,
+                    valueColor: AlwaysStoppedAnimation<Color>(percent > 75 ? AppColors.success : AppColors.primary),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(color: AppColors.background.withOpacity(0.5), borderRadius: BorderRadius.circular(16)),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _enhancedMiniStat('${attendedCount}', 'PRESENT', AppColors.success),
+                      Container(width: 1, height: 20, color: AppColors.border),
+                      _enhancedMiniStat('${absentCount}', 'ABSENT', AppColors.danger),
+                      Container(width: 1, height: 20, color: AppColors.border),
+                      _enhancedMiniStat('${absenceRate.toStringAsFixed(1)}%', 'MISSING', AppColors.textLight),
+                    ],
+                  ),
+                )
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildSectionHeader(String title, {VoidCallback? onTap}) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  Widget _enhancedMiniStat(String val, String label, Color color) {
+    return Column(
       children: [
-        Text(title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.black87)),
-        if (onTap != null)
-          GestureDetector(
-            onTap: onTap,
-            child: const Text('See All →', style: TextStyle(color: AppColors.primaryTeal, fontSize: 13, fontWeight: FontWeight.w600)),
-          ),
+        Text(val, style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: color)),
+        Text(label, style: const TextStyle(fontSize: 9, color: AppColors.textLight, fontWeight: FontWeight.w800)),
       ],
     );
   }
 
-  Widget _buildRecentItem(String title, String subtitle, IconData icon, Color iconColor) {
+  Widget _miniStat(String val, String label) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(val, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: AppColors.textPrimary)),
+        Text(label, style: const TextStyle(fontSize: 10, color: AppColors.textLight, fontWeight: FontWeight.w600)),
+      ],
+    );
+  }
+
+  Widget _buildRecentHistory(List<AttendanceModel> attendances) {
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('RECENT ACTIVITY', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: AppColors.textLight, letterSpacing: 1.5)),
+              TextButton(onPressed: () {}, child: const Text('View All', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800))),
+            ],
+          ),
+          const SizedBox(height: 8),
+          attendances.isEmpty
+            ? _buildEmptyHistory()
+            : Column(children: attendances.take(4).map((a) => _buildHistoryItem(a)).toList()),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHistoryItem(AttendanceModel a) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.cardColor,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.borderColor, width: 0.5),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.border.withOpacity(0.5))),
+      child: ListTile(
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(color: AppColors.success.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+          child: const Icon(Icons.check_circle_rounded, color: AppColors.success, size: 20),
+        ),
+        title: Text(a.courseName ?? 'Academic Session', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
+        subtitle: Text(a.labName ?? 'Verified Location', style: const TextStyle(fontSize: 12)),
+        trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.textLight),
       ),
-      child: Row(
+    );
+  }
+
+  Widget _buildEmptyHistory() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: AppColors.border)),
+      child: const Column(
         children: [
-          Icon(icon, color: iconColor, size: 22),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: Colors.black87)),
-                const SizedBox(height: 2),
-                Text(subtitle, style: const TextStyle(fontSize: 12, color: AppColors.grayText)),
-              ],
-            ),
+          Icon(Icons.history_rounded, color: AppColors.textLight, size: 32),
+          SizedBox(height: 12),
+          Text('No attendance records found yet.', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNotifIcon() {
+    return Consumer<NotificationProvider>(
+      builder: (context, provider, child) => Stack(
+        alignment: Alignment.center,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.notifications_none_rounded, color: Colors.white),
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationScreen())),
           ),
-          const Icon(Icons.chevron_right, color: AppColors.grayText, size: 18),
+          if (provider.unreadCount > 0)
+            Positioned(top: 12, right: 12, child: Container(width: 8, height: 8, decoration: const BoxDecoration(color: AppColors.danger, shape: BoxShape.circle))),
         ],
       ),
     );
@@ -272,26 +317,20 @@ class _StudentDashboardState extends State<StudentDashboard> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Logout'),
-        content: const Text('Are you sure you want to log out?'),
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Text('Sign Out?', style: TextStyle(fontWeight: FontWeight.w900)),
+        content: const Text('Are you sure you want to end your dashboard session?'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
             onPressed: () async {
               Navigator.pop(ctx);
-              final authProvider = Provider.of<AuthProvider>(context, listen: false);
-              await authProvider.logout();
-              if (mounted) {
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (_) => const LoginScreen()),
-                  (route) => false,
-                );
-              }
+              await Provider.of<AuthProvider>(context, listen: false).logout();
+              if (mounted) Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const LoginScreen()), (r) => false);
             },
-            child: const Text('Logout', style: TextStyle(color: Colors.redAccent)),
+            child: const Text('Logout'),
           ),
         ],
       ),

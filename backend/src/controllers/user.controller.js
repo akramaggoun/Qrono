@@ -11,19 +11,40 @@ exports.getAllUsers = async (req, res) => {
         role: true,
         isActive: true,
         createdAt: true,
-        student: { select: { group: { select: { name: true } } } },
-        professor: { select: { email: true } },
-        admin: { select: { email: true } }
+        student: { select: { id: true, urn: true, group: { select: { name: true } } } },
+        professor: { select: { id: true, email: true, professorCode: true, department: true } },
+        admin: { select: { id: true, email: true } }
       }
     });
-    res.status(200).json({ users });
+
+    const formattedUsers = users.map(u => {
+      let email = '';
+      if(u.role === 'admin') email = u.admin?.email || '';
+      else if(u.role === 'professor') email = u.professor?.email || '';
+      else if(u.role === 'student') email = u.student?.urn + '@student.qrono.dz';
+
+      return {
+        id: u.id,
+        name: u.name,
+        role: u.role,
+        isActive: u.isActive,
+        createdAt: u.createdAt,
+        matricule: u.student?.urn || u.professor?.professorCode || u.admin?.email || '',
+        email: email,
+        department: u.professor?.department || u.student?.group?.name || '',
+        profileId: u.professor?.id || u.student?.id || u.admin?.id || ''
+      };
+    });
+
+    res.status(200).json({ users: formattedUsers });
   } catch (error) {
     res.status(500).json({ message: "Failed to fetch users", error: error.message });
   }
 };
 
 exports.createUser = async (req, res) => {
-  const { name, password, role, email, groupId, studentCode, professorCode, department } = req.body;
+  console.log('📥 CREATE USER REQUEST:', req.body);
+  const { name, password, role, email, isActive, groupId, studentCode, professorCode, department } = req.body;
 
   const validRole = role.toLowerCase(); 
   if (!['admin', 'professor', 'student'].includes(validRole)) {
@@ -52,7 +73,7 @@ exports.createUser = async (req, res) => {
           name,
           password: hashedPassword,
           role: validRole,
-          isActive: true,
+          isActive: isActive !== undefined ? isActive : true,
         }
       });
 
@@ -131,40 +152,17 @@ exports.deleteUser = async (req, res) => {
 
   try {
     const user = await prisma.user.findUnique({
-      where: { id },
-      include: { student: true, professor: true }
+      where: { id }
     });
 
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    let hasRelatedRecords = false;
+    // Force delete user (Database cascading will automatically delete profile, sessions, and attendance)
+    await prisma.user.delete({
+      where: { id }
+    });
 
-    if (user.professor) {
-      const sessionCount = await prisma.session.count({
-        where: { professorId: user.professor.id }
-      });
-      if (sessionCount > 0) hasRelatedRecords = true;
-    }
-
-    if (user.student && !hasRelatedRecords) {
-      const attendanceCount = await prisma.attendance.count({
-        where: { studentId: user.student.id }
-      });
-      if (attendanceCount > 0) hasRelatedRecords = true;
-    }
-
-    if (hasRelatedRecords) {
-      await prisma.user.update({
-        where: { id },
-        data: { isActive: false }
-      });
-      return res.status(200).json({ message: "User deactivated" });
-    } else {
-      await prisma.user.delete({
-        where: { id }
-      });
-      return res.status(200).json({ message: "User deleted successfully" });
-    }
+    return res.status(200).json({ message: "User deleted successfully" });
   } catch (error) {
     res.status(500).json({ message: "Failed to delete user", error: error.message });
   }

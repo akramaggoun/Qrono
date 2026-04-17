@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import '../../core/constants/app_colors.dart';
+import '../../models/attendance_model.dart';
 import '../../providers/presence_provider.dart';
 
 class MyAttendanceScreen extends StatefulWidget {
@@ -18,101 +21,46 @@ class _MyAttendanceScreenState extends State<MyAttendanceScreen> {
     });
   }
 
-  String _formatDateTime(String? isoString) {
-    if (isoString == null) return '--';
-    try {
-      final dt = DateTime.parse(isoString).toLocal();
-      return '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
-    } catch (_) {
-      return isoString;
-    }
-  }
+  String _formatDateTime(DateTime dt) => DateFormat('MMM dd, yyyy  •  HH:mm').format(dt.toLocal());
 
   @override
   Widget build(BuildContext context) {
-    const bgColor = Color(0xFF0D1117);
-    const cardColor = Color(0xFF161B22);
-    const tealColor = Color(0xFF00C9A7);
-
     return Scaffold(
-      backgroundColor: bgColor,
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('My Attendance', style: TextStyle(color: Colors.white)),
-        backgroundColor: cardColor,
-        iconTheme: const IconThemeData(color: tealColor),
+        centerTitle: true,
+        title: const Column(
+          children: [
+            Text('MY ATTENDANCE', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 1)),
+            Text('Complete history of your حضور', style: TextStyle(fontSize: 10, color: Colors.white70, fontWeight: FontWeight.w400)),
+          ],
+        ),
       ),
       body: Consumer<PresenceProvider>(
         builder: (context, provider, child) {
-          if (provider.isLoading) {
-            return const Center(child: CircularProgressIndicator(color: tealColor));
+          if (provider.isLoading && provider.myAttendances.isEmpty) {
+            return const Center(child: CircularProgressIndicator(color: AppColors.primary));
           }
 
           final myAttendances = provider.myAttendances;
 
-          final total = myAttendances.length;
-          final present = total; // assuming list contains only present entries
-          final rate = total > 0 ? 100 : 0; // simple mock logic for percent 
+          if (myAttendances.isEmpty) {
+            return _buildEmptyState();
+          }
 
           return Column(
             children: [
-              // Stats
-              Container(
-                padding: const EdgeInsets.all(20),
-                margin: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [tealColor, tealColor.withOpacity(0.7)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildStatItem('Total', '$total'),
-                    Container(height: 30, width: 1, color: Colors.white30),
-                    _buildStatItem('Present', '$present'),
-                    Container(height: 30, width: 1, color: Colors.white30),
-                    _buildStatItem('Rate', '$rate%'),
-                  ],
-                ),
-              ),
-              
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Sessions History',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
-                    ),
-                    Icon(Icons.filter_list, color: Colors.white54),
-                  ],
-                ),
-              ),
-
-              // List
+              _buildStatsModule(myAttendances.length),
               Expanded(
-                child: myAttendances.isEmpty
-                    ? const Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.history, color: Colors.white24, size: 60),
-                            SizedBox(height: 16),
-                            Text('Aucun historique', style: TextStyle(color: Colors.white70, fontSize: 16)),
-                          ],
-                        ),
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        itemCount: myAttendances.length,
-                        itemBuilder: (context, index) {
-                          return _buildAttendanceCard(myAttendances[index], cardColor, tealColor);
-                        },
-                      ),
+                child: RefreshIndicator(
+                  onRefresh: () => provider.fetchMyAttendances(),
+                  child: ListView.separated(
+                    padding: const EdgeInsets.all(20),
+                    itemCount: myAttendances.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 12),
+                    itemBuilder: (context, index) => _buildAttendanceCard(myAttendances[index]),
+                  ),
+                ),
               ),
             ],
           );
@@ -121,65 +69,128 @@ class _MyAttendanceScreenState extends State<MyAttendanceScreen> {
     );
   }
 
-  Widget _buildStatItem(String label, String value) {
-    return Column(
-      children: [
-        Text(value, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
-        Text(label, style: const TextStyle(fontSize: 12, color: Colors.white)),
-      ],
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.05), shape: BoxShape.circle),
+            child: const Icon(Icons.history_rounded, size: 52, color: AppColors.textLight),
+          ),
+          const SizedBox(height: 24),
+          const Text('No classes attended yet', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: AppColors.textPrimary)),
+          const SizedBox(height: 8),
+          const Text('Scan QR codes in class to see logs here.', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+        ],
+      ),
     );
   }
 
-  Widget _buildAttendanceCard(dynamic att, Color cardColor, Color tealColor) {
-    final session = att['session'] ?? {};
-    final labName = session['room']?['name'] ?? 'Laboratory';
-    final courseName = 'Course Session'; 
-    final time = _formatDateTime(att['checkedInAt']);
-    final isQr = att['method'] == 'qr';
+  Widget _buildStatsModule(int total) {
+    const goal = 20;
+    final progress = (total / goal).clamp(0.0, 1.0);
+    final percent = (progress * 100).toInt();
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white12, width: 0.5),
+        color: Colors.white,
+        borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(32), bottomRight: Radius.circular(32)),
+        boxShadow: AppColors.softShadow,
       ),
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: tealColor.withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(isQr ? Icons.qr_code : Icons.check_circle_outline, color: tealColor, size: 24),
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              SizedBox(
+                width: 70, height: 70,
+                child: CircularProgressIndicator(
+                  value: progress,
+                  strokeWidth: 8,
+                  backgroundColor: AppColors.background,
+                  color: AppColors.primary,
+                ),
+              ),
+              Text('$percent%', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: AppColors.textPrimary)),
+            ],
           ),
-          const SizedBox(width: 15),
+          const SizedBox(width: 24),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  courseName,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
-                ),
+                Text('$total SESSIONS COMPLETED', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: AppColors.textLight, letterSpacing: 1)),
                 const SizedBox(height: 4),
-                Text(labName, style: const TextStyle(fontSize: 13, color: Colors.white70)),
+                const Text('Keep it up! Your attendance rate is excellent.', style: TextStyle(fontSize: 13, color: AppColors.textSecondary, fontWeight: FontWeight.w600, height: 1.3)),
               ],
             ),
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                time,
-                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Colors.white),
-              ),
-            ],
-          ),
         ],
       ),
+    );
+  }
+
+  Widget _buildAttendanceCard(AttendanceModel att) {
+    final time = att.checkedInAt != null ? _formatDateTime(att.checkedInAt!) : 'N/A';
+    final isQr = att.method == AttendanceMethod.qr;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: AppColors.softShadow,
+        border: Border.all(color: AppColors.border.withOpacity(0.5)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(color: AppColors.success.withOpacity(0.1), borderRadius: BorderRadius.circular(14)),
+              child: Icon(isQr ? Icons.qr_code_scanner_rounded : Icons.check_circle_rounded, color: AppColors.success, size: 20),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(att.courseName ?? 'Academic Session', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14, color: AppColors.textPrimary)),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      const Icon(Icons.location_on_rounded, size: 12, color: AppColors.textLight),
+                      const SizedBox(width: 4),
+                      Text(att.labName ?? 'Verified Hall', style: const TextStyle(fontSize: 11, color: AppColors.textLight, fontWeight: FontWeight.w600)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                _statusBadge(att.status),
+                const SizedBox(height: 8),
+                Text(time.split('•').last.trim(), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: AppColors.primary)),
+                Text(time.split('•').first.trim(), style: const TextStyle(fontSize: 9, color: AppColors.textLight, fontWeight: FontWeight.w700)),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _statusBadge(String status) {
+    final color = status.toLowerCase() == 'present' ? AppColors.success : AppColors.danger;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+      child: Text(status.toUpperCase(), style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: color, letterSpacing: 0.5)),
     );
   }
 }

@@ -1,4 +1,4 @@
-const { verifyToken } = require('../utils/jwt');
+const { verifyUserToken } = require('../utils/jwt');
 
 const prisma = require('../utils/prisma');
 
@@ -14,7 +14,7 @@ const authMiddleware = async (req, res, next) => {
 
     let decoded;
     try {
-      decoded = verifyToken(token);
+      decoded = verifyUserToken(token);
     } catch (err) {
       return res.status(401).json({ message: 'Invalid or expired token' });
     }
@@ -25,12 +25,10 @@ const authMiddleware = async (req, res, next) => {
 
     const user = await prisma.user.findUnique({
       where: { id: decoded.id },
-      select: {
-        id: true,
-        name: true,
-        role: true,
-        isActive: true,
-        createdAt: true
+      include: {
+        professor: { select: { id: true } },
+        student: { select: { id: true } },
+        admin: { select: { id: true } }
       }
     });
 
@@ -42,7 +40,13 @@ const authMiddleware = async (req, res, next) => {
       return res.status(403).json({ message: 'Account deactivated. Please contact support.' });
     }
 
-    req.user = user;
+    // Attach role-specific IDs directly to req.user for convenience
+    req.user = {
+      ...user,
+      professorId: user.professor?.id,
+      studentId: user.student?.id,
+      adminId: user.admin?.id
+    };
     next();
 
   } catch (error) {
