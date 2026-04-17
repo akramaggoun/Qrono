@@ -1,23 +1,8 @@
 const prisma = require('../utils/prisma');
-const qrService = require('../services/qr.service');
-const notificationService = require('../services/notification.service');
+const qrService = require('../services/qr.service'); 
 
 exports.createSession = async (req, res) => {
-  console.log('📥 CREATE SESSION REQUEST:', req.body);
-  
-  // Support both camelCase and snake_case (Fix for Bug 3)
-  const courseName = req.body.courseName || req.body.course_name;
-  const startTime = req.body.startTime || req.body.start_time;
-  const endTime = req.body.endTime || req.body.end_time;
-  const isRecurring = req.body.isRecurring ?? req.body.is_recurring ?? false;
-  const recurrence = req.body.recurrence || null;
-  const groupId = req.body.groupId || req.body.group_id;
-  const labId = req.body.labId || req.body.lab_id;
-  const scheduleId = req.body.scheduleId || req.body.schedule_id || null;
-
-  if (!courseName || !startTime || !endTime || !groupId || !labId) {
-    return res.status(400).json({ message: 'Missing required session fields' });
-  }
+  const { courseName, startTime, endTime, isRecurring, recurrence, groupId, labId } = req.body;
 
   const start = new Date(startTime);
   const end = new Date(endTime);
@@ -39,25 +24,6 @@ exports.createSession = async (req, res) => {
       return res.status(403).json({ message: 'Only professors can create sessions' });
     }
 
-    // Sequence Diagram Step 3 : Conflict / Availability Check
-    const conflictingSessions = await prisma.session.findMany({
-      where: {
-        labId: labId,
-        status: 'ACTIVE',
-        OR: [
-          {
-            startTime: { lt: end },
-            endTime: { gt: start }
-          }
-        ]
-      }
-    });
-
-    if (conflictingSessions.length > 0) {
-      return res.status(409).json({ message: 'Laboratory already occupied at this time' });
-    }
-
-    // Sequence Diagram Step 4 : Create Session
     const session = await prisma.session.create({
       data: {
         courseName,
@@ -66,31 +32,24 @@ exports.createSession = async (req, res) => {
         isRecurring: isRecurring || false,
         recurrence: recurrence || null,
         professorId: professorProfile.id,
-        scheduleId: scheduleId,
         groupId,
-        labId,
-        status: 'ACTIVE'
-      },
-      include: {
-        lab: { select: { name: true } },
-        schedule: { select: { name: true } }
+        labId
       }
     });
 
     const students = await prisma.user.findMany({
-      where: { student: { groupId: groupId } }
+      where: { groupId: req.body.groupId }
     });
 
     for (const student of students) {
       await notificationService.createAndSendNotification(student.id, {
-        title: "New session",
-        body: `The session ${courseName} is starting at ${session.lab.name}.`,
+        title: "📅 New session",
+        body: `The session ${courseName} is starting at ${labName}.`,
         type: "SESSION_STARTED",
-        data: { sessionId: session.id }
+        data: { sessionId: newSession.id }
       });
     }
 
-    // Sequence Diagram Step 5 : Generate QR Code
     const qrExpiration = new Date(end);
     qrExpiration.setMinutes(qrExpiration.getMinutes() + 5);
 
@@ -109,19 +68,10 @@ exports.createSession = async (req, res) => {
     res.status(201).json({
       message: 'Session created successfully',
       session: {
-        id: session.id,
-        course_name: session.courseName,
-        start_time: session.startTime.toISOString(),
-        end_time: session.endTime.toISOString(),
-        is_recurring: session.isRecurring,
-        recurrence: session.recurrence,
-        professor_id: session.professorId.toString(),
-        schedule_id: session.scheduleId ? session.scheduleId.toString() : null,
-        group_id: session.groupId.toString(),
-        lab_id: session.labId.toString(),
-        qr_code: {
+        ...session,
+        qrCode: {
           token: qrToken,
-          valid_until: qrExpiration.toISOString()
+          validUntil: qrExpiration
         }
       }
     });
@@ -143,24 +93,14 @@ exports.getMySessions = async (req, res) => {
       return res.status(403).json({ message: 'Professor profile not found' });
     }
 
-    const sessionsData = await prisma.session.findMany({
+    const sessions = await prisma.session.findMany({
       where: { professorId: professorProfile.id },
       include: {
         group: { select: { name: true, yearLevel: true } },
         lab: { select: { name: true, roomNumber: true, building: true } },
-        schedule: { select: { name: true } },
-        qrCodes: { where: { isRevoked: false }, select: { token: true, validUntil: true } },
         _count: { select: { attendance: true } }
       },
       orderBy: { startTime: 'desc' }
-    });
-
-    const sessions = sessionsData.map(s => {
-      const { qrCodes, ...rest } = s;
-      return {
-        ...rest,
-        qr_code: qrCodes.length > 0 ? { token: qrCodes[0].token, valid_until: qrCodes[0].validUntil } : null
-      };
     });
 
     res.status(200).json({ sessions });
@@ -186,22 +126,18 @@ exports.closeSession = async (req, res) => {
 
     const now = new Date();
     
-    // Sequence Diagram Step 7 : Close Session
     const updatedSession = await prisma.session.update({
       where: { id },
-      data: { 
-        endTime: now,
-        status: 'CLOSED'
-      }
+      data: { endTime: now }
     });
 
     const students = await prisma.user.findMany({
-      where: { student: { groupId: session.groupId } }
+      where: { groupId: session.groupId }
     });
 
     for (const student of students) {
       await notificationService.createAndSendNotification(student.id, {
-        title: "Session ended",
+        title: "🏁 Session ended",
         body: `The ${session.courseName} session is now closed.`,
         type: "SESSION_CLOSED",
         data: { sessionId: session.id }
@@ -230,53 +166,25 @@ exports.getSessionAttendances = async (req, res) => {
   const { id } = req.params;
 
   try {
-    const session = await prisma.session.findUnique({
-      where: { id },
-      select: { groupId: true }
-    });
-
-    if (!session) {
-      return res.status(404).json({ message: 'Session not found' });
-    }
-
-    // 1. Get all students that belong to the session's group
-    const groupStudents = await prisma.student.findMany({
-      where: { groupId: session.groupId },
-      include: {
-        user: { select: { name: true, role: true } },
-        group: { select: { name: true } }
-      }
-    });
-
-    // 2. Get the actual attendance records
     const attendances = await prisma.attendance.findMany({
-      where: { sessionId: id }
-    });
-
-    // 3. Create a map for fast lookup
-    const attendanceMap = {};
-    attendances.forEach(a => {
-      attendanceMap[a.studentId] = a;
-    });
-
-    // 4. Combine students with their attendance status
-    const fullAttendanceList = groupStudents.map(student => {
-      const record = attendanceMap[student.id];
-      return {
-        id: record ? record.id : `absent-${student.id}`,
-        student: student,
-        status: record ? 'present' : 'absent',
-        checkInAt: record ? record.checkInAt : null,
-        method: record ? record.method : null
-      };
+      where: { sessionId: id },
+      include: {
+        student: {
+          include: {
+            user: { select: { name: true, role: true } },
+            group: { select: { name: true } }
+          }
+        },
+        checkInAt: true,
+        method: true
+      },
+      orderBy: { checkInAt: 'asc' }
     });
 
     res.status(200).json({ 
       sessionId: id,
-      totalStudents: fullAttendanceList.length,
-      presentCount: attendances.length,
-      absentCount: fullAttendanceList.length - attendances.length,
-      attendances: fullAttendanceList 
+      count: attendances.length,
+      attendances 
     });
 
   } catch (error) {

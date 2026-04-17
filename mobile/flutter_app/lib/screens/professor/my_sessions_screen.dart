@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:intl/intl.dart';
-import '../../core/constants/app_colors.dart';
 import '../../providers/session_provider.dart';
 import '../../models/session_model.dart';
 import 'attendance_list_screen.dart';
-import 'show_qr_screen.dart';
 
 class MySessionsScreen extends StatefulWidget {
   const MySessionsScreen({super.key});
@@ -15,6 +12,7 @@ class MySessionsScreen extends StatefulWidget {
 }
 
 class _MySessionsScreenState extends State<MySessionsScreen> {
+  
   @override
   void initState() {
     super.initState();
@@ -27,154 +25,124 @@ class _MySessionsScreenState extends State<MySessionsScreen> {
     if (isoString == null) return '--:--';
     try {
       final dt = DateTime.parse(isoString).toLocal();
-      return DateFormat('HH:mm').format(dt);
+      return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
     } catch (_) {
       return isoString;
     }
   }
 
-  String _formatDate(DateTime dt) => DateFormat('MMM dd, yyyy').format(dt);
-
   @override
   Widget build(BuildContext context) {
+    const bgColor = Color(0xFF0D1117);
+    const cardColor = Color(0xFF161B22);
+    const tealColor = Color(0xFF00C9A7);
+
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: bgColor,
       appBar: AppBar(
-        centerTitle: true,
-        title: const Column(
-          children: [
-            Text('SESSION HISTORY', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 1)),
-            Text('Trace all your academic presence logs', style: TextStyle(fontSize: 10, color: Colors.white70, fontWeight: FontWeight.w400)),
-          ],
-        ),
+        title: const Text('Sessions History', style: TextStyle(color: Colors.white)),
+        backgroundColor: cardColor,
+        iconTheme: const IconThemeData(color: tealColor),
       ),
       body: Consumer<SessionProvider>(
         builder: (context, provider, child) {
           if (provider.isLoading) {
-            return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+            return const Center(child: CircularProgressIndicator(color: tealColor));
           }
 
           final sessions = provider.sessions;
 
           if (sessions.isEmpty) {
-            return _buildEmptyState();
+            return const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.event_busy, color: Colors.white54, size: 60),
+                  SizedBox(height: 16),
+                  Text('Aucune séance créée', style: TextStyle(color: Colors.white70, fontSize: 16)),
+                ],
+              ),
+            );
           }
 
-          return RefreshIndicator(
-            onRefresh: () => provider.fetchMySessions(),
-            child: ListView.separated(
-              padding: const EdgeInsets.all(20),
-              itemCount: sessions.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 16),
-              itemBuilder: (context, index) => _buildSessionCard(sessions[index], context),
-            ),
+          return ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: sessions.length,
+            itemBuilder: (context, index) {
+              return _buildSessionCard(sessions[index], cardColor, tealColor, context);
+            },
           );
         },
       ),
     );
   }
 
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(32),
-            decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.05), shape: BoxShape.circle),
-            child: const Icon(Icons.history_toggle_off_rounded, size: 52, color: AppColors.textLight),
-          ),
-          const SizedBox(height: 24),
-          const Text('No sessions yet', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: AppColors.textPrimary)),
-          const SizedBox(height: 8),
-          const Text('Your attendance history will appear here.', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSessionCard(SessionModel session, BuildContext context) {
+  Widget _buildSessionCard(SessionModel session, Color cardColor, Color tealColor, BuildContext context) {
     final isClosed = DateTime.now().isAfter(session.endTime);
+    final statusText = isClosed ? 'CLOSED' : 'ACTIVE';
+    final statusColor = isClosed ? Colors.red.shade700 : Colors.green;
+    
     final startTime = _formatTime(session.startTime.toIso8601String());
     final endTime = _formatTime(session.endTime.toIso8601String());
-    final date = _formatDate(session.startTime);
+    final groupName = session.groupId; 
+    final labName = session.labId;
 
     return Container(
+      margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: AppColors.softShadow,
-        border: Border.all(color: !isClosed ? AppColors.primary.withOpacity(0.3) : AppColors.border.withOpacity(0.5), width: !isClosed ? 1.5 : 1),
+        color: cardColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white12, width: 0.5),
       ),
       child: InkWell(
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => AttendanceListScreen(courseName: session.courseName, sessionId: session.id ?? '')),
-        ),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(16),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => AttendanceListScreen(
+                courseName: 'Session', 
+                sessionId: session.id ?? '',
+              ),
+            ),
+          );
+        },
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(20.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
+                  const Text(
+                    'Course Session',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white),
+                  ),
                   Container(
-                    padding: const EdgeInsets.all(10),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: (isClosed ? AppColors.textLight : AppColors.success).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
+                      color: statusColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(20),
                     ),
-                    child: Icon(isClosed ? Icons.event_available_rounded : Icons.sensors_rounded, color: isClosed ? AppColors.textLight : AppColors.success, size: 20),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(session.courseName, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: AppColors.textPrimary)),
-                        Text(date, style: const TextStyle(fontSize: 11, color: AppColors.textLight, fontWeight: FontWeight.w600)),
-                      ],
+                    child: Text(
+                      statusText,
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: statusColor),
                     ),
                   ),
-                  _buildStatusBadge(isClosed),
                 ],
               ),
-              const Padding(padding: EdgeInsets.symmetric(vertical: 16), child: Divider(height: 1)),
+              const SizedBox(height: 10),
+              _buildInfoRow(Icons.science_outlined, labName),
+              _buildInfoRow(Icons.groups_outlined, groupName),
+              const Divider(height: 30, color: Colors.white12),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _iconLabel(Icons.groups_rounded, session.groupName ?? 'General Group'),
-                      const SizedBox(height: 8),
-                      _iconLabel(Icons.location_on_rounded, session.labName ?? 'Auditorium'),
-                    ],
-                  ),
-                  _timeStats(startTime, endTime),
+                  const Text('Time:', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                  Text('\$startTime - \$endTime', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Colors.white)),
                 ],
               ),
-              if (session.attendanceCount != null) ...[
-                const SizedBox(height: 20),
-                _attendanceBar(session.attendanceCount!),
-              ],
-              if (!isClosed) ...[
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    icon: const Icon(Icons.qr_code_rounded, size: 18),
-                    label: const Text('SHOW QR CODE', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12, letterSpacing: 1)),
-                    onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ShowQrScreen(session: session))),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                  ),
-                ),
-              ],
             ],
           ),
         ),
@@ -182,52 +150,14 @@ class _MySessionsScreenState extends State<MySessionsScreen> {
     );
   }
 
-  Widget _buildStatusBadge(bool isClosed) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: (isClosed ? AppColors.background : AppColors.success.withOpacity(0.1)),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: (isClosed ? AppColors.border : AppColors.success.withOpacity(0.2))),
-      ),
-      child: Text(
-        isClosed ? 'CLOSED' : 'LIVE',
-        style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: isClosed ? AppColors.textLight : AppColors.success, letterSpacing: 1),
-      ),
-    );
-  }
-
-  Widget _iconLabel(IconData icon, String text) {
-    return Row(
-      children: [
-        Icon(icon, size: 14, color: AppColors.textLight),
-        const SizedBox(width: 8),
-        Text(text, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
-      ],
-    );
-  }
-
-  Widget _timeStats(String start, String end) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        Text('$start - $end', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: AppColors.textPrimary)),
-        const Text('DURATION', style: TextStyle(fontSize: 9, color: AppColors.textLight, fontWeight: FontWeight.w800)),
-      ],
-    );
-  }
-
-  Widget _attendanceBar(int count) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(12)),
+  Widget _buildInfoRow(IconData icon, String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6.0),
       child: Row(
         children: [
-          const Icon(Icons.people_alt_rounded, size: 16, color: AppColors.primary),
+          Icon(icon, size: 16, color: Colors.white54),
           const SizedBox(width: 8),
-          Text('$count Students Present', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.primary)),
-          const Spacer(),
-          const Icon(Icons.arrow_forward_ios_rounded, size: 10, color: AppColors.textLight),
+          Text(text, style: const TextStyle(fontSize: 14, color: Colors.white)),
         ],
       ),
     );

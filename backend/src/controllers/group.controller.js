@@ -9,6 +9,7 @@ exports.getAllGroups = async (req, res) => {
         }
       },
       orderBy: [
+        { yearLevel: 'asc' },
         { name: 'asc' }
       ]
     });
@@ -20,37 +21,8 @@ exports.getAllGroups = async (req, res) => {
   }
 };
 
-exports.getGroupStudents = async (req, res) => {
-  const { id } = req.params;
-  try {
-    const group = await prisma.group.findUnique({
-      where: { id },
-      include: {
-        students: {
-          include: {
-            user: {
-              select: { id: true, name: true, isActive: true }
-            }
-          }
-        }
-      }
-    });
-
-    if (!group) {
-      return res.status(404).json({ message: 'Group not found' });
-    }
-
-    res.status(200).json({ students: group.students });
-  } catch (error) {
-    console.error('Get Group Students Error:', error.message);
-    res.status(500).json({ message: 'Failed to fetch group students', error: error.message });
-  }
-};
-
 exports.createGroup = async (req, res) => {
-  console.log('📥 CREATE GROUP REQUEST:', req.body);
-  const { name, year_level, specialty } = req.body;
-  const yearLevel = year_level;
+  const { name, yearLevel } = req.body;
 
   if (!name) {
     return res.status(400).json({ message: 'Group name is required' });
@@ -60,8 +32,7 @@ exports.createGroup = async (req, res) => {
     const newGroup = await prisma.group.create({
       data: {
         name,
-        yearLevel: yearLevel || null,
-        specialty: specialty || null
+        yearLevel: yearLevel ? parseInt(yearLevel) : null
       }
     });
 
@@ -78,8 +49,7 @@ exports.createGroup = async (req, res) => {
 
 exports.updateGroup = async (req, res) => {
   const { id } = req.params;
-  const { name, year_level, specialty } = req.body;
-  const yearLevel = year_level;
+  const { name, yearLevel } = req.body;
 
   try {
     const existingGroup = await prisma.group.findUnique({ where: { id } });
@@ -91,8 +61,7 @@ exports.updateGroup = async (req, res) => {
       where: { id },
       data: {
         name: name || existingGroup.name,
-        yearLevel: yearLevel !== undefined ? yearLevel : existingGroup.yearLevel,
-        specialty: specialty !== undefined ? specialty : existingGroup.specialty
+        yearLevel: yearLevel !== undefined ? parseInt(yearLevel) : existingGroup.yearLevel
       }
     });
 
@@ -125,8 +94,11 @@ exports.deleteGroup = async (req, res) => {
       return res.status(404).json({ message: 'Group not found' });
     }
 
-    // The safety check was removed to allow force deleting the group.
-    // Prisma will automatically set groupId to null for students in this group (onDelete: SetNull).
+    if (group._count.students > 0) {
+      return res.status(409).json({ 
+        message: `Cannot delete group. ${group._count.students} student(s) are still assigned to this group. Please unassign them first.` 
+      });
+    }
 
     await prisma.group.delete({
       where: { id }

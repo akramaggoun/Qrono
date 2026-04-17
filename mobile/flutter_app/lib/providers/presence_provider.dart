@@ -1,35 +1,29 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../core/network/api_client.dart';
-
-import '../models/attendance_model.dart';
+import '../core/constants/api_constants.dart';
 
 class PresenceProvider extends ChangeNotifier {
   final _apiClient = ApiClient();
   bool _isLoading = false;
   String? _errorMessage;
   Map<String, dynamic>? _attendanceData;
-  List<AttendanceModel> _attendances = [];
-  List<AttendanceModel> _myAttendances = [];
-  List<dynamic> _groupStudents = [];
-  
+  List<dynamic> _attendances = [];
+  List<dynamic> _myAttendances = [];
+
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   Map<String, dynamic>? get attendanceData => _attendanceData;
-  List<AttendanceModel> get attendances => _attendances;
-  List<AttendanceModel> get myAttendances => _myAttendances;
-  List<dynamic> get groupStudents => _groupStudents;
+  List<dynamic> get attendances => _attendances;
+  List<dynamic> get myAttendances => _myAttendances;
 
   Future<void> fetchSessionAttendance(String sessionId) async {
     _isLoading = true;
     notifyListeners();
     try {
-      final response = await _apiClient.get('/sessions/$sessionId/attendances');
+      final response = await _apiClient.get('/api/sessions/\$sessionId/attendances');
       if (response.statusCode == 200) {
-        final Map<String, dynamic> body = jsonDecode(response.body);
-        final List data = body['attendances'] ?? [];
-        _attendances = data.map((e) => AttendanceModel.fromJson(e)).toList();
-        _attendanceData = body; // Store full response for metadata
+        _attendances = jsonDecode(response.body)['attendances'] ?? [];
       }
     } catch (e) {
       _errorMessage = "Erreur présences: \$e";
@@ -42,32 +36,14 @@ class PresenceProvider extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      final response = await _apiClient.get('/presences/my-attendances');
+      final response = await _apiClient.get('/api/presences/my-attendances');
       if (response.statusCode == 200) {
-        final Map<String, dynamic> body = jsonDecode(response.body);
-        final List data = body['attendances'] ?? [];
-        _myAttendances = data.map((e) => AttendanceModel.fromJson(e)).toList();
-        _attendanceData = body; // Store full response for stats
+        _myAttendances = jsonDecode(response.body)['attendances'] ?? [];
       }
     } catch (e) {
       _errorMessage = "Erreur historique: \$e";
     }
     _isLoading = false;
-    notifyListeners();
-  }
-
-  Future<void> fetchGroupStudents(String groupId) async {
-    _isLoading = true;
-    notifyListeners();
-    try {
-      final response = await _apiClient.get('/groups/$groupId/students');
-      if (response.statusCode == 200) {
-        _groupStudents = jsonDecode(response.body)['students'] ?? [];
-      }
-    } catch (e) {
-      _errorMessage = "Erreur chargement groupe: $e";
-    }
-    _isLoading = false; 
     notifyListeners();
   }
 
@@ -78,7 +54,7 @@ class PresenceProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await _apiClient.post('/presences/scan', {
+      final response = await _apiClient.post('/api/presences/scan', {
         'qr_token': qrToken,
       });
 
@@ -87,7 +63,6 @@ class PresenceProvider extends ChangeNotifier {
 
       if (response.statusCode == 201) {
         _attendanceData = jsonDecode(response.body)['attendance'];
-        await fetchMyAttendances(); // Refresh history and stats immediately
         return true;
       } else if (response.statusCode == 404) {
         _errorMessage = "Code QR invalide.";

@@ -26,6 +26,7 @@ yarn-debug.log*
 yarn-error.log*
 
 # Prisma
+prisma/migrations/
 *.db
 *.sqlite
 
@@ -72,16 +73,3 @@ mobile/flutter_app/ios/Flutter/Flutter.podspec
 # OS FILES
 # =========================================
 desktop.ini
-
-# =========================================
-# LOCAL LOGS / TEMP
-# =========================================
-*.txt
-*.log
-scratch/
-.gemini/
-flutter_output.txt
-current_tunnel_url.txt
-server_logs.txt
-devices.txt
-build_apk.txt

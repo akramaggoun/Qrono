@@ -1,15 +1,15 @@
+import 'dart:convert';
 import 'dart:async';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:provider/provider.dart';
-import 'package:intl/intl.dart';
 import '../../core/constants/app_colors.dart';
 import '../../models/session_model.dart';
 import '../../providers/session_provider.dart';
 
 class ShowQrScreen extends StatefulWidget {
   final SessionModel session;
+
   const ShowQrScreen({super.key, required this.session});
 
   @override
@@ -29,17 +29,23 @@ class _ShowQrScreenState extends State<ShowQrScreen> {
 
   void _calculateTimeLeft() {
     final now = DateTime.now();
-    setState(() {
-      _timeLeft = widget.session.endTime.isAfter(now)
-          ? widget.session.endTime.difference(now)
-          : Duration.zero;
-    });
+    if (widget.session.endTime.isAfter(now)) {
+      setState(() {
+        _timeLeft = widget.session.endTime.difference(now);
+      });
+    } else {
+      setState(() {
+        _timeLeft = Duration.zero;
+      });
+    }
   }
 
   void _startTimer() {
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_timeLeft.inSeconds > 0) {
-        setState(() => _timeLeft -= const Duration(seconds: 1));
+        setState(() {
+          _timeLeft = _timeLeft - const Duration(seconds: 1);
+        });
       } else {
         _timer?.cancel();
       }
@@ -52,181 +58,194 @@ class _ShowQrScreenState extends State<ShowQrScreen> {
     super.dispose();
   }
 
-  String _formatDuration(Duration d) {
-    String two(int n) => n.toString().padLeft(2, '0');
-    return '${two(d.inHours)}:${two(d.inMinutes.remainder(60))}:${two(d.inSeconds.remainder(60))}';
+  String _formatDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, "0");
+    String twoDigitMinutes = twoDigits(duration.inMinutes.remainder(60));
+    String twoDigitSeconds = twoDigits(duration.inSeconds.remainder(60));
+    return "${twoDigits(duration.inHours)}:$twoDigitMinutes:$twoDigitSeconds";
   }
 
-  void _closeSession() async {
+  void _handleCloseSession() async {
     final sessionProvider = Provider.of<SessionProvider>(context, listen: false);
-    final success = await sessionProvider.closeSession(widget.session.id!);
+    final success = await sessionProvider.closeSession(widget.session.id!); // UML Step 7
 
-    if (mounted) {
-      if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Session closed successfully.'), backgroundColor: AppColors.success));
-        Navigator.of(context).pop();
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Error closing session.'), backgroundColor: AppColors.danger));
-      }
+    if (success && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Session fermée avec succès.'),
+        backgroundColor: Colors.green,
+      ));
+      Navigator.of(context).pop();
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Erreur lors de la fermeture de la session.'),
+        backgroundColor: Colors.redAccent,
+      ));
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final bool isActive = _timeLeft.inSeconds > 0;
-    final String qrData = widget.session.qrToken ?? 'ERROR: NO TOKEN';
+    final Map<String, dynamic> qrPayload = {
+      'course_name': widget.session.courseName,
+      'lab_id': widget.session.labId,
+      'group_id': widget.session.groupId,
+      'professor_id': widget.session.professorId,
+      'start_time': widget.session.startTime.toIso8601String(),
+      'end_time': widget.session.endTime.toIso8601String(),
+      'session_id': widget.session.id,
+    };
+
+    final String qrData = jsonEncode(qrPayload);
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        centerTitle: true,
-        title: const Column(
-          children: [
-            Text('PRESENCE QR CODE', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 1)),
-            Text('Students can now register their attendance', style: TextStyle(fontSize: 10, color: Colors.white70, fontWeight: FontWeight.w400)),
-          ],
-        ),
+        title: const Text('Code QR de la Session'),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(24, 16, 24, 40),
-        child: Column(
-          children: [
-            _buildStatusBadge(isActive),
-            const SizedBox(height: 24),
-            _buildSessionInfo(),
-            const SizedBox(height: 24),
-            _buildCountdownModule(),
-            const SizedBox(height: 32),
-            _buildQrModule(qrData),
-            const SizedBox(height: 48),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: _closeSession,
-                icon: const Icon(Icons.stop_circle_rounded, size: 20),
-                label: const Text('TERMINATE SESSION NOW', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1, fontSize: 13)),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.danger,
-                  side: const BorderSide(color: AppColors.danger, width: 2),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatusBadge(bool isActive) {
-    final color = isActive ? AppColors.success : AppColors.danger;
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.3), width: 1.5),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 10, height: 10,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle, boxShadow: [BoxShadow(color: color.withOpacity(0.5), blurRadius: 8, spreadRadius: 2)]),
-          ),
-          const SizedBox(width: 12),
-          Text(
-            isActive ? 'BROADCASTING LIVE' : 'SESSION EXPIRED',
-            style: TextStyle(color: color, fontWeight: FontWeight.w900, fontSize: 12, letterSpacing: 1.5),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSessionInfo() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24), boxShadow: AppColors.softShadow),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(widget.session.courseName, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: AppColors.textPrimary)),
-          const SizedBox(height: 12),
-          Row(
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(30.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.schedule_rounded, size: 16, color: AppColors.primary),
-              const SizedBox(width: 8),
-              Text(
-                '${DateFormat('HH:mm').format(widget.session.startTime)} - ${DateFormat('HH:mm').format(widget.session.endTime)}',
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textSecondary),
-              ),
-              const Spacer(),
-              if (widget.session.groupName != null)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(8)),
-                  child: Text(widget.session.groupName!, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: AppColors.textLight)),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: _timeLeft.inSeconds > 0 ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
                 ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      _timeLeft.inSeconds > 0 ? Icons.wifi_tethering : Icons.portable_wifi_off, 
+                      color: _timeLeft.inSeconds > 0 ? Colors.green : Colors.red, 
+                      size: 16
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      _timeLeft.inSeconds > 0 ? 'SESSION ACTIVE' : 'SESSION EXPIRÉE', 
+                      style: TextStyle(
+                        color: _timeLeft.inSeconds > 0 ? Colors.green : Colors.red, 
+                        fontWeight: FontWeight.bold, 
+                        fontSize: 12
+                      )
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              
+              Text(
+                widget.session.courseName,
+                style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.black87),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 10),
+              
+              // IHM: Countdown Timer (UML Step 6)
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryTeal.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  children: [
+                    const Text('TEMPS RESTANT', style: TextStyle(fontSize: 10, letterSpacing: 1, color: AppColors.grayText)),
+                    Text(
+                      _formatDuration(_timeLeft),
+                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.primaryTeal, fontFeatures: [FontFeature.tabularFigures()]),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 30),
+
+              Container(
+                padding: const EdgeInsets.all(25),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(30),
+                  border: Border.all(color: AppColors.borderColor, width: 1),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.06),
+                      blurRadius: 30,
+                      offset: const Offset(0, 15),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    QrImageView(
+                      data: qrData,
+                      version: QrVersions.auto,
+                      size: 260.0,
+                      eyeStyle: const QrEyeStyle(
+                        eyeShape: QrEyeShape.square,
+                        color: AppColors.primaryTeal,
+                      ),
+                      dataModuleStyle: const QrDataModuleStyle(
+                        dataModuleShape: QrDataModuleShape.square,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      'SCANNEZ POUR MARQUER LA PRÉSENCE',
+                      style: TextStyle(
+                        fontSize: 10,
+                        letterSpacing: 1.2,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.grayText,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              
+              const SizedBox(height: 50),
+
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _buildTimeInfo(Icons.login, 'Début: ${TimeOfDay.fromDateTime(widget.session.startTime).format(context)}'),
+                  const SizedBox(width: 30),
+                  _buildTimeInfo(Icons.logout, 'Fin: ${TimeOfDay.fromDateTime(widget.session.endTime).format(context)}'),
+                ],
+              ),
+              
+              const SizedBox(height: 40),
+
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _handleCloseSession,
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 18),
+                    backgroundColor: Colors.redAccent.withOpacity(0.1),
+                    foregroundColor: Colors.redAccent,
+                    elevation: 0,
+                  ),
+                  child: const Text('ARRÊTER LA SESSION', style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              ),
             ],
           ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildCountdownModule() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(colors: [AppColors.primary, AppColors.primary.withBlue(200)]),
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: AppColors.activeShadow,
-      ),
-      child: Column(
-        children: [
-          const Text('REMAINING TIME', style: TextStyle(fontSize: 10, letterSpacing: 2.5, color: Colors.white70, fontWeight: FontWeight.w900)),
-          const SizedBox(height: 8),
-          Text(
-            _formatDuration(_timeLeft),
-            style: const TextStyle(fontSize: 42, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 2, fontFeatures: [FontFeature.tabularFigures()]),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildQrModule(String data) {
-    return Container(
-      padding: const EdgeInsets.all(32),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(32),
-        boxShadow: AppColors.softShadow,
-        border: Border.all(color: AppColors.border.withOpacity(0.5)),
-      ),
-      child: Column(
-        children: [
-          QrImageView(
-            data: data,
-            version: QrVersions.auto,
-            size: 240.0,
-            eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: AppColors.primary),
-            dataModuleStyle: const QrDataModuleStyle(dataModuleShape: QrDataModuleShape.square, color: AppColors.textPrimary),
-          ),
-          const SizedBox(height: 24),
-          const Text(
-            'STUDENTS: PLEASE SCAN THIS CODE TO REGISTER PRESENCE',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 11, letterSpacing: 1.2, fontWeight: FontWeight.w900, color: AppColors.textLight, height: 1.5),
-          ),
-          const SizedBox(height: 8),
-          const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textLight, size: 20),
-        ],
-      ),
+  Widget _buildTimeInfo(IconData icon, String text) {
+    return Column(
+      children: [
+        Icon(icon, color: AppColors.primaryTeal, size: 20),
+        const SizedBox(height: 5),
+        Text(text, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black87)),
+      ],
     );
   }
 }

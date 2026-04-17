@@ -15,11 +15,11 @@ class GroupModel {
 
   factory GroupModel.fromJson(Map<String, dynamic> json) {
     return GroupModel(
-      id: json['id'] ?? '',
-      name: json['name'] ?? '',
-      yearLevel: json['yearLevel']?.toString() ?? '',
+      id: json['id'],
+      name: json['name'],
+      yearLevel: json['year_level'] ?? '',
       specialty: json['specialty'] ?? '',
-      createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt']) : DateTime.now(),
+      createdAt: DateTime.parse(json['created_at']),
     );
   }
 
@@ -27,9 +27,9 @@ class GroupModel {
     return {
       'id': id,
       'name': name,
-      'yearLevel': yearLevel,
+      'year_level': yearLevel,
       'specialty': specialty,
-      'createdAt': createdAt.toIso8601String(),
+      'created_at': createdAt.toIso8601String(),
     };
   }
 }

@@ -1,9 +1,7 @@
 const jwt = require('jsonwebtoken');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback_qrono_secret_key_2024';
-const QR_SECRET = process.env.QR_SECRET || 'fallback_qrono_qr_key_2024';
-
-console.log('🔑 JWT Utility: Secrets initialized');
+const JWT_SECRET = process.env.JWT_SECRET;
+const QR_SECRET = process.env.QR_SECRET;
 
 const generateUserToken = (payload) => {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: '1d' });

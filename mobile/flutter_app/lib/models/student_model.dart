@@ -16,7 +16,7 @@ class StudentModel extends UserModel {
     required this.urn,
     required this.studentCode,
     this.groupId,
-  }) : super(role: UserRole.student);
+  }) : super(role: 'student');
 
   factory StudentModel.fromJson(Map<String, dynamic> json) {
     return StudentModel(

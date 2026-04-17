@@ -17,8 +17,7 @@ exports.getAllLaboratories = async (req, res) => {
 };
 
 exports.createLaboratory = async (req, res) => {
-  const { name, building, room_number, capacity } = req.body;
-  const roomNumber = room_number;
+  const { name, building, roomNumber, capacity } = req.body;
 
   if (!name || !roomNumber) {
     return res.status(400).json({ message: 'Name and Room Number are required' });
@@ -56,8 +55,7 @@ exports.createLaboratory = async (req, res) => {
 
 exports.updateLaboratory = async (req, res) => {
   const { id } = req.params;
-  const { name, building, room_number, capacity, isActive } = req.body;
-  const roomNumber = room_number;
+  const { name, building, roomNumber, capacity, isActive } = req.body;
 
   try {
     const existingLab = await prisma.laboratory.findUnique({ where: { id } });
@@ -107,13 +105,14 @@ exports.deleteLaboratory = async (req, res) => {
       return res.status(404).json({ message: 'Laboratory not found' });
     }
 
-    await prisma.laboratory.delete({
-      where: { id }
+    await prisma.laboratory.update({
+      where: { id },
+      data: { isActive: false }
     });
 
     res.status(200).json({ 
-      message: 'Laboratory deleted successfully', 
-      laboratory: { id } 
+      message: 'Laboratory deactivated successfully (Soft Delete)', 
+      laboratory: { id, isActive: false } 
     });
 
   } catch (error) {

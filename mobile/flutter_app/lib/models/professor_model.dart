@@ -14,7 +14,7 @@ class ProfessorModel extends UserModel {
     required this.professorCode,
     required this.department,
     super.phone,
-  }) : super(role: UserRole.professor);
+  }) : super(role: 'professor');
 
   factory ProfessorModel.fromJson(Map<String, dynamic> json) {
     return ProfessorModel(

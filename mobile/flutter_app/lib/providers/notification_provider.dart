@@ -2,11 +2,9 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import '../core/network/api_client.dart';
 import '../models/notification_model.dart';
-import 'package:socket_io_client/socket_io_client.dart' as IO;
 
 class NotificationProvider extends ChangeNotifier {
   final _apiClient = ApiClient();
-  IO.Socket? _socket;
   
   List<NotificationModel> _notifications = [];
   bool _isLoading = false;
@@ -17,37 +15,6 @@ class NotificationProvider extends ChangeNotifier {
   int get unreadCount => _unreadCount;
 
   // ═══════════════════════════════
-  //  REAL-TIME SOCKET INIT (Phase 2)
-  // ═══════════════════════════════
-
-  void initSocket(String userId) {
-    if (_socket != null) return;
-
-    print('📡 Connecting to Notification Socket for user: $userId');
-    _socket = IO.io('http://localhost:3000', IO.OptionBuilder()
-      .setTransports(['websocket'])
-      .setQuery({'userId': userId})
-      .enableAutoConnect()
-      .build());
-
-    _socket!.onConnect((_) {
-      print('✅ Connected to Notification Server');
-    });
-
-    _socket!.on('notification:new', (data) {
-      print('📩 New real-time notification received!');
-      fetchNotifications(); // Auto-refresh list
-    });
-
-    _socket!.onDisconnect((_) => print('❌ Disconnected from Notification Server'));
-  }
-
-  void disconnectSocket() {
-    _socket?.disconnect();
-    _socket = null;
-  }
-
-  // ═══════════════════════════════
   //  SCENARIO 5 — READ NOTIFICATIONS (UML)
   // ═══════════════════════════════
 
@@ -56,7 +23,7 @@ class NotificationProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await _apiClient.get('/notifications');
+      final response = await _apiClient.get('/api/notifications');
       if (response.statusCode == 200) {
         final List data = jsonDecode(response.body)['notifications'];
         _notifications = data.map((n) => NotificationModel.fromJson(n)).toList();
@@ -72,7 +39,7 @@ class NotificationProvider extends ChangeNotifier {
 
   Future<bool> markAsRead(String id) async {
     try {
-      final response = await _apiClient.patch('/notifications/$id/read', {});
+      final response = await _apiClient.patch('/api/notifications/$id/read', {});
       if (response.statusCode == 200) {
         final index = _notifications.indexWhere((n) => n.id == id);
         if (index != -1) {
@@ -100,7 +67,7 @@ class NotificationProvider extends ChangeNotifier {
 
   Future<bool> markAllAsRead() async {
     try {
-      final response = await _apiClient.patch('/notifications/read-all', {});
+      final response = await _apiClient.patch('/api/notifications/read-all', {});
       if (response.statusCode == 200) {
         _notifications = _notifications.map((n) => NotificationModel(
           id: n.id,
