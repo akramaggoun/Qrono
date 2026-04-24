@@ -3,6 +3,7 @@ import '../../core/constants/app_colors.dart';
 import '../../models/laboratory_model.dart';
 import '../../providers/admin_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class ManageLabsScreen extends StatefulWidget {
   const ManageLabsScreen({super.key});
@@ -68,34 +69,34 @@ class _ManageLabsScreenState extends State<ManageLabsScreen> {
                     child: const Icon(Icons.science_outlined, color: AppColors.primaryTeal),
                   ),
                   const SizedBox(width: 12),
-                  Text(isEditing ? 'Edit Laboratory' : 'New Laboratory',
+                  Text(isEditing ? 'edit_laboratory'.tr() : 'new_laboratory'.tr(),
                       style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 ]),
                 const SizedBox(height: 6),
-                const Text('All fields marked * are required.',
+                Text('all_fields_required'.tr(),
                     style: TextStyle(fontSize: 11, color: AppColors.grayText)),
                 const SizedBox(height: 20),
 
                 TextFormField(
                   controller: nameCtrl,
-                  decoration: const InputDecoration(labelText: 'Laboratory Name *', hintText: 'Ex: Lab Info 01', prefixIcon: Icon(Icons.label_outline)),
-                  validator: (v) => (v == null || v.isEmpty) ? 'Required field' : null,
+                  decoration: InputDecoration(labelText: 'lab_name_required'.tr(), hintText: 'Ex: Lab Info 01', prefixIcon: const Icon(Icons.label_outline)),
+                  validator: (v) => (v == null || v.isEmpty) ? 'required_field'.tr() : null,
                 ),
                 const SizedBox(height: 12),
                 Row(children: [
                   Expanded(
                     child: TextFormField(
                       controller: buildingCtrl,
-                      decoration: const InputDecoration(labelText: 'Building *', hintText: 'Block A', prefixIcon: Icon(Icons.apartment_outlined)),
-                      validator: (v) => (v == null || v.isEmpty) ? 'Required' : null,
+                      decoration: InputDecoration(labelText: 'building_required'.tr(), hintText: 'Block A', prefixIcon: const Icon(Icons.apartment_outlined)),
+                      validator: (v) => (v == null || v.isEmpty) ? 'required_field'.tr() : null,
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: TextFormField(
                       controller: roomCtrl,
-                      decoration: const InputDecoration(labelText: 'Room No. *', hintText: '101', prefixIcon: Icon(Icons.door_back_door_outlined)),
-                      validator: (v) => (v == null || v.isEmpty) ? 'Required' : null,
+                      decoration: InputDecoration(labelText: 'room_no_required'.tr(), hintText: '101', prefixIcon: const Icon(Icons.door_back_door_outlined)),
+                      validator: (v) => (v == null || v.isEmpty) ? 'required_field'.tr() : null,
                     ),
                   ),
                 ]),
@@ -103,10 +104,10 @@ class _ManageLabsScreenState extends State<ManageLabsScreen> {
                 TextFormField(
                   controller: capCtrl,
                   keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Capacity (No. students) *', prefixIcon: Icon(Icons.people_outline)),
+                  decoration: InputDecoration(labelText: 'capacity_required'.tr(), prefixIcon: const Icon(Icons.people_outline)),
                   validator: (v) {
-                    if (v == null || v.isEmpty) return 'Required';
-                    if (int.tryParse(v) == null || int.parse(v) <= 0) return 'Valid number required';
+                    if (v == null || v.isEmpty) return 'required_field'.tr();
+                    if (int.tryParse(v) == null || int.parse(v) <= 0) return 'valid_number_required'.tr();
                     return null;
                   },
                 ),
@@ -116,19 +117,19 @@ class _ManageLabsScreenState extends State<ManageLabsScreen> {
                   value: isActive,
                   onChanged: (v) => setSheet(() => isActive = v),
                   activeColor: AppColors.primaryTeal,
-                  title: const Text('Room Available', style: TextStyle(fontWeight: FontWeight.w600)),
-                  subtitle: Text(isActive ? 'Accessible for sessions' : 'Unavailable or under maintenance',
+                  title: Text('room_available'.tr(), style: const TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: Text(isActive ? 'accessible_for_sessions'.tr() : 'unavailable_maintenance'.tr(),
                       style: TextStyle(fontSize: 11, color: isActive ? Colors.green : Colors.redAccent)),
                   contentPadding: EdgeInsets.zero,
                 ),
                 const SizedBox(height: 20),
                 Row(children: [
-                  Expanded(child: OutlinedButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel'))),
+                  Expanded(child: OutlinedButton(onPressed: () => Navigator.pop(ctx), child: Text('cancel'.tr()))),
                   const SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton.icon(
                       icon: Icon(isEditing ? Icons.save_outlined : Icons.add, size: 18),
-                      label: Text(isEditing ? 'Save' : 'Add'),
+                      label: Text(isEditing ? 'save'.tr() : 'add'.tr()),
                       onPressed: () async {
                         print('🔴 BUTTON PRESSED: Add/Edit Lab');
                         final isValid = formKey.currentState!.validate();
@@ -161,7 +162,7 @@ class _ManageLabsScreenState extends State<ManageLabsScreen> {
                             content: Row(children: [
                               const Icon(Icons.check_circle_outline, color: Colors.white, size: 18),
                               const SizedBox(width: 8),
-                              Text(isEditing ? 'Laboratoire mis à jour' : 'Laboratoire ajouté'),
+                              Text(isEditing ? 'lab_updated_success'.tr() : 'lab_created_success'.tr()),
                             ]),
                             backgroundColor: Colors.green,
                             behavior: SnackBarBehavior.floating,
@@ -170,7 +171,7 @@ class _ManageLabsScreenState extends State<ManageLabsScreen> {
                           ));
                         } else {
                           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                            content: Text(adminProvider.errorMessage ?? "An error occurred."),
+                            content: Text(adminProvider.errorMessage ?? "error_occurred".tr()),
                             backgroundColor: Colors.redAccent,
                             behavior: SnackBarBehavior.floating,
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -194,14 +195,14 @@ class _ManageLabsScreenState extends State<ManageLabsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(children: [
-          Icon(Icons.warning_amber_rounded, color: Colors.orange),
-          SizedBox(width: 10),
-          Text('Delete this Lab?'),
+        title: Row(children: [
+          const Icon(Icons.warning_amber_rounded, color: Colors.orange),
+          const SizedBox(width: 10),
+          Text('delete_lab_prompt'.tr()),
         ]),
-        content: Text('"${lab.name}" will be permanently deleted.'),
+        content: Text('delete_lab_desc'.tr(args: [lab.name])),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(context), child: Text('cancel'.tr())),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
             onPressed: () async {
@@ -209,10 +210,10 @@ class _ManageLabsScreenState extends State<ManageLabsScreen> {
               if (success && mounted) {
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content: const Row(children: [
-                    Icon(Icons.delete_outline, color: Colors.white, size: 18),
-                    SizedBox(width: 8),
-                    Text('Laboratoire supprimé'),
+                  content: Row(children: [
+                    const Icon(Icons.delete_outline, color: Colors.white, size: 18),
+                    const SizedBox(width: 8),
+                    Text('lab_deleted_success'.tr()),
                   ]),
                   backgroundColor: Colors.redAccent,
                   behavior: SnackBarBehavior.floating,
@@ -221,7 +222,7 @@ class _ManageLabsScreenState extends State<ManageLabsScreen> {
                 ));
               }
             },
-            child: const Text('Delete', style: TextStyle(color: Colors.white)),
+            child: Text('delete'.tr(), style: const TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -236,8 +237,8 @@ class _ManageLabsScreenState extends State<ManageLabsScreen> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Laboratoires', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
-            Text('${Provider.of<AdminProvider>(context).laboratories.where((l) => l.isActive).length}/${Provider.of<AdminProvider>(context).laboratories.length} actifs', 
+            Text('laboratories_title'.tr(), style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+            Text('active_labs_count_2'.tr(args: [Provider.of<AdminProvider>(context).laboratories.where((l) => l.isActive).length.toString(), Provider.of<AdminProvider>(context).laboratories.length.toString()]), 
                  style: const TextStyle(fontSize: 11, color: AppColors.grayText)),
           ],
         ),
@@ -246,7 +247,7 @@ class _ManageLabsScreenState extends State<ManageLabsScreen> {
         onPressed: () => _showLabDialog(),
         backgroundColor: AppColors.primaryTeal,
         icon: const Icon(Icons.add_business_outlined, color: Colors.white),
-        label: const Text('Add Lab', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        label: Text('add_lab'.tr(), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
       ),
       body: Consumer<AdminProvider>(
         builder: (context, adminProvider, child) {
@@ -269,7 +270,7 @@ class _ManageLabsScreenState extends State<ManageLabsScreen> {
                       controller: _searchController,
                       onChanged: (v) => setState(() => _query = v),
                       decoration: InputDecoration(
-                        hintText: 'Name or building...',
+                        hintText: 'search_name_building'.tr(),
                         prefixIcon: const Icon(Icons.search, size: 20, color: AppColors.grayText),
                         suffixIcon: _query.isNotEmpty
                             ? IconButton(icon: const Icon(Icons.clear, size: 18, color: AppColors.grayText),
@@ -283,9 +284,9 @@ class _ManageLabsScreenState extends State<ManageLabsScreen> {
                     ),
                     const SizedBox(height: 10),
                     Row(
-                      children: ['All', 'Active', 'Inactive'].map((f) {
+                      children: ['filter_all'.tr(), 'filter_active'.tr(), 'filter_inactive'.tr()].map((f) {
                         final sel = _filterStatus == f;
-                        Color c = f == 'Active' ? Colors.green : (f == 'Inactive' ? Colors.redAccent : Colors.black87);
+                        Color c = f == 'filter_active'.tr() ? Colors.green : (f == 'filter_inactive'.tr() ? Colors.redAccent : Colors.black87);
                         return Padding(
                           padding: const EdgeInsets.only(right: 8),
                           child: GestureDetector(
@@ -313,7 +314,7 @@ class _ManageLabsScreenState extends State<ManageLabsScreen> {
                     ? Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
                         Icon(Icons.search_off, size: 60, color: Colors.grey.shade300),
                         const SizedBox(height: 12),
-                        const Text('No laboratories found', style: TextStyle(color: Colors.black54, fontWeight: FontWeight.bold)),
+                        Text('no_laboratories_found'.tr(), style: const TextStyle(color: Colors.black54, fontWeight: FontWeight.bold)),
                       ]))
                     : ListView.separated(
                         padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
@@ -362,7 +363,7 @@ class _ManageLabsScreenState extends State<ManageLabsScreen> {
                   child: Row(mainAxisSize: MainAxisSize.min, children: [
                     Container(width: 6, height: 6, decoration: BoxDecoration(color: statusColor, shape: BoxShape.circle)),
                     const SizedBox(width: 5),
-                    Text(lab.isActive ? 'Active' : 'Inactive',
+                    Text(lab.isActive ? 'filter_active'.tr() : 'filter_inactive'.tr(),
                         style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: statusColor)),
                   ]),
                 ),
@@ -372,12 +373,12 @@ class _ManageLabsScreenState extends State<ManageLabsScreen> {
             Row(
               children: [
                 // IHM : icône + valeur = scan rapide, pas besoin de lire le label
-                _buildMeta(Icons.people_outline, '${lab.capacity} seats'),
+                _buildMeta(Icons.people_outline, '${lab.capacity} ${'seats'.tr()}'),
                 const SizedBox(width: 20),
                 _buildMeta(Icons.apartment_outlined, lab.building),
                 const Spacer(),
-                Tooltip(message: 'Edit', child: IconButton(icon: const Icon(Icons.edit_outlined, size: 20, color: Colors.blueAccent), onPressed: () => _showLabDialog(lab: lab))),
-                Tooltip(message: 'Delete', child: IconButton(icon: const Icon(Icons.delete_outline, size: 20, color: Colors.redAccent), onPressed: () => _confirmDelete(lab))),
+                Tooltip(message: 'edit_tooltip'.tr(), child: IconButton(icon: const Icon(Icons.edit_outlined, size: 20, color: Colors.blueAccent), onPressed: () => _showLabDialog(lab: lab))),
+                Tooltip(message: 'delete_tooltip'.tr(), child: IconButton(icon: const Icon(Icons.delete_outline, size: 20, color: Colors.redAccent), onPressed: () => _confirmDelete(lab))),
               ],
             ),
           ],

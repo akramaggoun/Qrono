@@ -16,9 +16,11 @@ class AdminModel extends UserModel {
     return AdminModel(
       id: json['id'] ?? '',
       matricule: json['matricule'] ?? '',
-      fullName: json['full_name'] ?? json['name'] ?? '',
-      isActive: json['is_active'] ?? true,
-      createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : DateTime.now(),
+      fullName: json['name'] ?? json['full_name'] ?? '',
+      isActive: json['isActive'] ?? json['is_active'] ?? true,
+      createdAt: json['createdAt'] != null 
+          ? DateTime.parse(json['createdAt']) 
+          : (json['created_at'] != null ? DateTime.parse(json['created_at']) : DateTime.now()),
       email: json['email'] ?? '',
       phone: json['phone'],
     );

@@ -20,11 +20,13 @@ class ProfessorModel extends UserModel {
     return ProfessorModel(
       id: json['id'] ?? '',
       matricule: json['matricule'] ?? '',
-      fullName: json['full_name'] ?? json['name'] ?? '',
-      isActive: json['is_active'] ?? true,
-      createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : DateTime.now(),
+      fullName: json['name'] ?? json['full_name'] ?? '',
+      isActive: json['isActive'] ?? json['is_active'] ?? true,
+      createdAt: json['createdAt'] != null 
+          ? DateTime.parse(json['createdAt']) 
+          : (json['created_at'] != null ? DateTime.parse(json['created_at']) : DateTime.now()),
       email: json['email'] ?? '',
-      professorCode: json['professor_code'] ?? '',
+      professorCode: json['professor_code'] ?? json['professorCode'] ?? json['matricule'] ?? '',
       department: json['department'] ?? '',
       phone: json['phone'],
     );

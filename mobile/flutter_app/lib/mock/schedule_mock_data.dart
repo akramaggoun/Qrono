@@ -1,0 +1,20 @@
+/// Contains only schedule constants. All user data is fetched from the real database via API.
+class ScheduleMockData {
+
+  static final List<String> timeSlots = [
+    '08:00 - 09:30',
+    '09:30 - 11:00',
+    '11:00 - 12:30',
+    '12:30 - 14:00',
+    '14:00 - 15:30',
+    '15:30 - 17:00',
+  ];
+
+  static final List<String> weekDays = [
+    'Sunday',
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+  ];
+}

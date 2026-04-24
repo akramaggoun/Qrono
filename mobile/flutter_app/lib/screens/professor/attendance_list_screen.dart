@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/presence_provider.dart';
+import 'package:easy_localization/easy_localization.dart';
+import '../admin/student_stats_admin_screen.dart';
 
 class AttendanceListScreen extends StatefulWidget {
   final String courseName;
@@ -48,8 +50,8 @@ class _AttendanceListScreenState extends State<AttendanceListScreen> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Live Attendance', 
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: primaryColor)),
+            Text('live_attendance'.tr(), 
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: primaryColor)),
             Text(widget.courseName, 
               style: const TextStyle(fontSize: 12, color: Color(0xFF6C757D), fontWeight: FontWeight.w500)),
           ],
@@ -70,11 +72,11 @@ class _AttendanceListScreenState extends State<AttendanceListScreen> {
                 children: [
                   Icon(Icons.person_search_rounded, size: 64, color: Colors.grey.withOpacity(0.2)),
                   const SizedBox(height: 16),
-                  const Text('No students registered yet', 
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16, color: Color(0xFF9E9E9E))),
+                  Text('no_students_registered'.tr(), 
+                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16, color: Color(0xFF9E9E9E))),
                   const SizedBox(height: 8),
-                  const Text('Waiting for QR scans...', 
-                    style: TextStyle(fontSize: 13, color: Color(0xFFBDBDBD))),
+                  Text('waiting_qr_scans'.tr(), 
+                    style: const TextStyle(fontSize: 13, color: Color(0xFFBDBDBD))),
                 ],
               ),
             );
@@ -93,7 +95,7 @@ class _AttendanceListScreenState extends State<AttendanceListScreen> {
   }
 
   Widget _buildStudentCard(dynamic studentRecord, Color tealColor) {
-    final studentName = studentRecord['student']?['user']?['name'] ?? 'Incomplete Profile';
+    final studentName = studentRecord['student']?['user']?['name'] ?? 'incomplete_profile'.tr();
     final matricule = studentRecord['student']?['urn'] ?? 'N/A';
     final time = _formatTime(studentRecord['checkInAt']);
     final isPresent = studentRecord['status'] == 'present';
@@ -109,6 +111,21 @@ class _AttendanceListScreenState extends State<AttendanceListScreen> {
         ],
       ),
       child: ListTile(
+        onTap: () {
+          final userId = studentRecord['student']?['userId'];
+          if (userId != null) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => StudentStatsAdminScreen(
+                  studentId: userId,
+                  studentName: studentName,
+                  courseName: widget.courseName,
+                ),
+              ),
+            );
+          }
+        },
         contentPadding: const EdgeInsets.all(16),
         leading: Container(
           height: 48, width: 48,
@@ -135,29 +152,83 @@ class _AttendanceListScreenState extends State<AttendanceListScreen> {
             ],
           ),
         ),
-        trailing: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.end,
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: isPresent 
-                  ? (isQr ? Colors.green : Colors.orange).withOpacity(0.1)
-                  : Colors.red.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(isPresent ? (isQr ? 'حاضر (QR)' : 'حاضر (يدوي)') : 'غائب', 
-                style: TextStyle(
-                  fontSize: 11, 
-                  fontWeight: FontWeight.w900, 
-                  color: isPresent ? (isQr ? Colors.green : Colors.orange) : Colors.red
-                )),
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: isPresent 
+                      ? (isQr ? Colors.green : Colors.orange).withOpacity(0.1)
+                      : Colors.red.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(isPresent ? (isQr ? 'present_qr'.tr() : 'present_manual'.tr()) : 'absent'.tr(), 
+                    style: TextStyle(
+                      fontSize: 11, 
+                      fontWeight: FontWeight.w900, 
+                      color: isPresent ? (isQr ? Colors.green : Colors.orange) : Colors.red
+                    )),
+                ),
+                const SizedBox(height: 6),
+                Text(isPresent ? time : '--:--', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF1A1C1E))),
+              ],
             ),
-            const SizedBox(height: 6),
-            Text(isPresent ? time : '--:--', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF1A1C1E))),
+            if (!isPresent) ...[
+              const SizedBox(width: 8),
+              IconButton(
+                icon: Icon(Icons.check_circle_outline, color: tealColor),
+                onPressed: () => _confirmManualAttendance(studentRecord),
+                tooltip: 'mark_present'.tr(),
+              ),
+            ],
           ],
         ),
+      ),
+    );
+  }
+
+  void _confirmManualAttendance(dynamic studentRecord) {
+    final studentName = studentRecord['student']?['user']?['name'] ?? 'incomplete_profile'.tr();
+    final studentId = studentRecord['student']?['id'];
+
+    if (studentId == null) return;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('mark_present'.tr()),
+        content: Text('confirm_manual_attendance'.tr(args: [studentName])),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('cancel'.tr())),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF00C9A7),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final success = await context.read<PresenceProvider>().markManualAttendance(widget.sessionId, studentId);
+              if (success && mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content: Text('attendance_marked_success'.tr()),
+                  backgroundColor: Colors.green,
+                ));
+              } else if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content: Text(context.read<PresenceProvider>().errorMessage ?? 'error'.tr()),
+                  backgroundColor: Colors.redAccent,
+                ));
+              }
+            },
+            child: Text('confirm'.tr(), style: const TextStyle(color: Colors.white)),
+          ),
+        ],
       ),
     );
   }

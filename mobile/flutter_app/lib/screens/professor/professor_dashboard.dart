@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../core/constants/app_colors.dart';
-import 'create_session_screen.dart';
-import 'my_sessions_screen.dart';
 import 'attendance_list_screen.dart';
+import 'weekly_schedule_screen.dart';
+import 'my_sessions_screen.dart';
 import '../notification_screen.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
@@ -45,8 +46,8 @@ class _ProfessorDashboardState extends State<ProfessorDashboard> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Professor Dashboard', 
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF1A1C1E))),
+            Text('professor_dashboard'.tr(), 
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF1A1C1E))),
             Text(Provider.of<AuthProvider>(context).userName ?? 'University Faculty', 
               style: const TextStyle(fontSize: 12, color: Color(0xFF6C757D), fontWeight: FontWeight.w500)),
           ],
@@ -78,19 +79,19 @@ class _ProfessorDashboardState extends State<ProfessorDashboard> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildQuickActionHeader(context),
+                  _buildQuickActions(context),
                   const SizedBox(height: 30),
-                  _buildSectionTitle('Academic Insights'),
+                  _buildSectionTitle('academic_insights'.tr()),
                   const SizedBox(height: 15),
                   _buildModernStats(sessions),
                   const SizedBox(height: 30),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _buildSectionTitle('Active & Recent Sessions'),
+                      _buildSectionTitle('active_recent_sessions'.tr()),
                       TextButton(
                         onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MySessionsScreen())),
-                        child: const Text('View All', style: TextStyle(color: AppColors.primaryTeal, fontWeight: FontWeight.bold)),
+                        child: Text('view_all_btn'.tr(), style: const TextStyle(color: AppColors.primaryTeal, fontWeight: FontWeight.bold)),
                       ),
                     ],
                   ),
@@ -134,50 +135,58 @@ class _ProfessorDashboardState extends State<ProfessorDashboard> {
     );
   }
 
-  Widget _buildQuickActionHeader(BuildContext context) {
-    return InkWell(
-      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateSessionScreen())),
-      child: Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(28),
-          gradient: const LinearGradient(
-            colors: [Color(0xFF009688), Color(0xFF00796B)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF009688).withOpacity(0.3),
-              blurRadius: 20,
-              offset: const Offset(0, 10),
-            )
-          ],
-        ),
-        child: Row(
-          children: [
-            const CircleAvatar(
-              radius: 30,
-              backgroundColor: Colors.white24,
-              child: Icon(Icons.qr_code_scanner_rounded, color: Colors.white, size: 32),
-            ),
-            const SizedBox(width: 20),
-            const Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Start Attendance', 
-                    style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
-                  SizedBox(height: 4),
-                  Text('Launch session & generate QR', 
-                    style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500)),
-                ],
+  Widget _buildQuickActions(BuildContext context) {
+    return Column(
+      children: [
+        InkWell(
+          onTap: () {
+            final authProvider = Provider.of<AuthProvider>(context, listen: false);
+            final pId = authProvider.userId ?? '';
+            Navigator.push(context, MaterialPageRoute(builder: (_) => WeeklyScheduleScreen(professorId: pId)));
+          },
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(28),
+              gradient: const LinearGradient(
+                colors: [Color(0xFF1E88E5), Color(0xFF1565C0)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF1E88E5).withOpacity(0.3),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                )
+              ],
             ),
-            const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 28),
-          ],
+            child: Row(
+              children: [
+                const CircleAvatar(
+                  radius: 30,
+                  backgroundColor: Colors.white24,
+                  child: Icon(Icons.calendar_month_rounded, color: Colors.white, size: 32),
+                ),
+                const SizedBox(width: 20),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('plannings_title'.tr(), 
+                        style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
+                      const SizedBox(height: 4),
+                      Text('view_weekly_sessions'.tr(), 
+                        style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500)),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 28),
+              ],
+            ),
+          ),
         ),
-      ),
+      ],
     );
   }
 
@@ -193,11 +202,11 @@ class _ProfessorDashboardState extends State<ProfessorDashboard> {
 
     return Row(
       children: [
-        _buildStatsCard('Sessions', sessions.length.toString(), Icons.layers_rounded, Colors.blue),
+        _buildStatsCard('sessions_count_label'.tr(), sessions.length.toString(), Icons.layers_rounded, Colors.blue),
         const SizedBox(width: 12),
-        _buildStatsCard('Total Present', totalAttendance.toString(), Icons.group_rounded, Colors.teal),
+        _buildStatsCard('today_attendance'.tr(), totalAttendance.toString(), Icons.group_rounded, Colors.teal),
         const SizedBox(width: 12),
-        _buildStatsCard('Daily Avg', avg, Icons.analytics_rounded, Colors.orange),
+        _buildStatsCard('attendance_rate'.tr(), avg, Icons.analytics_rounded, Colors.orange),
       ],
     );
   }
@@ -236,8 +245,8 @@ class _ProfessorDashboardState extends State<ProfessorDashboard> {
           children: [
             Icon(Icons.inbox_rounded, size: 64, color: Colors.grey.withOpacity(0.2)),
             const SizedBox(height: 16),
-            const Text('Your session history is empty', 
-              style: TextStyle(color: Color(0xFF9E9E9E), fontSize: 14, fontWeight: FontWeight.w500)),
+            Text('empty_session_history'.tr(), 
+              style: const TextStyle(color: Color(0xFF9E9E9E), fontSize: 14, fontWeight: FontWeight.w500)),
           ],
         ),
       );
@@ -305,7 +314,7 @@ class _ProfessorDashboardState extends State<ProfessorDashboard> {
                     children: [
                       Text('${session.attendanceCount ?? 0}', 
                         style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: AppColors.primaryTeal)),
-                      const Text('Students', style: TextStyle(fontSize: 10, color: Color(0xFF9E9E9E), fontWeight: FontWeight.w600)),
+                      Text('students_label'.tr(), style: const TextStyle(fontSize: 10, color: Color(0xFF9E9E9E), fontWeight: FontWeight.w600)),
                     ],
                   ),
                 ],
@@ -324,7 +333,7 @@ class _ProfessorDashboardState extends State<ProfessorDashboard> {
         color: (active ? Colors.green : Colors.grey).withOpacity(0.1),
         borderRadius: BorderRadius.circular(8)
       ),
-      child: Text(active ? 'ACTIVE' : 'CLOSED', 
+      child: Text(active ? 'status_active'.tr() : 'status_closed'.tr(), 
         style: TextStyle(color: active ? Colors.green : Colors.grey, fontSize: 10, fontWeight: FontWeight.w800)),
     );
   }
@@ -334,10 +343,10 @@ class _ProfessorDashboardState extends State<ProfessorDashboard> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Confirm Logout'),
-        content: const Text('Do you want to terminate your current session?'),
+        title: Text('logout_title'.tr()),
+        content: Text('logout_confirm_msg'.tr()),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Stay')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('cancel'.tr())),
           TextButton(
             onPressed: () async {
               Navigator.pop(ctx);
@@ -350,7 +359,7 @@ class _ProfessorDashboardState extends State<ProfessorDashboard> {
                 );
               }
             },
-            child: const Text('Logout', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+            child: Text('logout'.tr(), style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
           ),
         ],
       ),

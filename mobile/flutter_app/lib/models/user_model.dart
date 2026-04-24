@@ -25,14 +25,14 @@ class UserModel {
     return UserModel(
       id: json['id'] ?? '',
       matricule: json['matricule'] ?? '',
-      fullName: json['name'] ?? '',
+      fullName: json['name'] ?? json['full_name'] ?? '',
       email: json['email'] ?? '',
       phone: json['phone'],
-      isActive: json['isActive'] ?? true,
+      isActive: json['isActive'] ?? json['is_active'] ?? true,
       createdAt: json['createdAt'] != null 
           ? DateTime.parse(json['createdAt']) 
-          : DateTime.now(),
-      role: json['role'] ?? 'student',
+          : (json['created_at'] != null ? DateTime.parse(json['created_at']) : DateTime.now()),
+      role: json['role']?.toString().toLowerCase() ?? 'student',
       department: json['department'],
     );
   }

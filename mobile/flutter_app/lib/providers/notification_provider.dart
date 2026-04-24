@@ -4,10 +4,14 @@ import '../core/network/api_client.dart';
 import '../models/notification_model.dart';
 import '../core/config/api_config.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
+import 'package:audioplayers/audioplayers.dart';
+import 'package:overlay_support/overlay_support.dart';
+import 'package:flutter/material.dart';
 
 class NotificationProvider extends ChangeNotifier {
   final _apiClient = ApiClient();
   io.Socket? _socket;
+  final _audioPlayer = AudioPlayer();
 
   List<NotificationModel> _notifications = [];
   bool _isLoading = false;
@@ -40,11 +44,80 @@ class NotificationProvider extends ChangeNotifier {
     });
 
     _socket!.on('notification:new', (data) {
-      print('📩 New real-time notification received!');
-      fetchNotifications(); // Auto-refresh list
+      try {
+        final notification = NotificationModel.fromJson(data);
+        _showPopup(notification);
+        _playSound(notification.type);
+      } catch (e) {
+        print('⚠️ Error parsing real-time notification: $e');
+      }
+      fetchNotifications();
     });
 
     _socket!.onDisconnect((_) => print('❌ Disconnected from Notification Server'));
+  }
+
+  void _playSound(String type) async {
+    String soundFile;
+    switch (type.toLowerCase()) {
+      case 'warning':
+      case 'error':
+      case 'critical':
+        soundFile = 'sounds/warning.mp3';
+        break;
+      case 'success':
+        soundFile = 'sounds/success.mp3';
+        break;
+      case 'info':
+      default:
+        soundFile = 'sounds/info.mp3';
+    }
+
+    try {
+      await _audioPlayer.play(AssetSource(soundFile));
+    } catch (e) {
+      print('⚠️ Could not play notification sound: $e');
+    }
+  }
+
+  void _showPopup(NotificationModel notification) {
+    Color bgColor;
+    IconData icon;
+
+    switch (notification.type.toLowerCase()) {
+      case 'warning':
+      case 'critical':
+        bgColor = Colors.orange.shade800;
+        icon = Icons.warning_amber_rounded;
+        break;
+      case 'error':
+        bgColor = Colors.red.shade800;
+        icon = Icons.error_outline_rounded;
+        break;
+      case 'success':
+        bgColor = Colors.green.shade800;
+        icon = Icons.check_circle_outline_rounded;
+        break;
+      default:
+        bgColor = Colors.blue.shade800;
+        icon = Icons.notifications_active_rounded;
+    }
+
+    showSimpleNotification(
+      Text(
+        notification.title,
+        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+      ),
+      subtitle: Text(
+        notification.body,
+        style: const TextStyle(color: Colors.white70),
+      ),
+      leading: Icon(icon, color: Colors.white, size: 30),
+      background: bgColor,
+      duration: const Duration(seconds: 4),
+      elevation: 4,
+      slideDismissDirection: DismissDirection.horizontal,
+    );
   }
 
   void disconnectSocket() {

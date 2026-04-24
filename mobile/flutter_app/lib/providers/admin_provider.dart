@@ -2,9 +2,13 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../core/network/api_client.dart';
 import '../models/user_model.dart';
+import '../models/student_model.dart';
+import '../models/professor_model.dart';
+import '../models/admin_model.dart';
 import '../models/laboratory_model.dart';
 import '../models/group_model.dart';
 import '../models/unauthorized_log_model.dart';
+import '../core/utils/user_factory.dart';
 
 class AdminProvider extends ChangeNotifier {
   final _apiClient = ApiClient();
@@ -80,7 +84,7 @@ class AdminProvider extends ChangeNotifier {
       final response = await _apiClient.get('/users');
       if (response.statusCode == 200) {
         final List data = jsonDecode(response.body)['users'];
-        _users = data.map((u) => UserModel.fromJson(u)).toList();
+        _users = data.map((u) => UserFactory.fromJson(u)).toList();
       }
     } catch (e) {
       _errorMessage = "Erreur chargement utilisateurs.";

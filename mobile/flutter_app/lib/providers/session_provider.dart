@@ -58,6 +58,22 @@ class SessionProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> fetchStudentSessions() async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final response = await _apiClient.get('/sessions/student-sessions');
+      if (response.statusCode == 200) {
+        final List data = jsonDecode(response.body)['sessions'] ?? [];
+        _sessions = data.map((e) => SessionModel.fromJson(e)).toList();
+      }
+    } catch (e) {
+      _errorMessage = "Erreur sessions étudiant: $e";
+    }
+    _isLoading = false;
+    notifyListeners();
+  }
+
   Future<SessionModel?> createSession(Map<String, dynamic> data) async {
     _isLoading = true;
     _errorMessage = null;

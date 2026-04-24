@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../core/constants/app_colors.dart';
 import 'manage_users_screen.dart';
 import 'manage_labs_screen.dart';
@@ -10,6 +11,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/notification_provider.dart';
 import '../auth/login_screen.dart';
 import '../../providers/admin_provider.dart';
+import 'create_plannings_screen.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -28,17 +30,18 @@ class _AdminDashboardState extends State<AdminDashboard> {
     });
   }
 
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Qrono Control Hub', style: TextStyle(color: Colors.black87)),
+        title: Text('control_hub_title'.tr(), style: const TextStyle(color: Colors.black87)),
         backgroundColor: Colors.white,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.black87),
         actions: [
           IconButton(
-            tooltip: 'Logout',
+            tooltip: 'logout'.tr(),
             icon: const Icon(Icons.logout, color: Colors.redAccent),
             onPressed: () => _showLogoutDialog(context),
           ),
@@ -47,7 +50,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
               alignment: Alignment.center,
               children: [
                 IconButton(
-                  tooltip: 'Notifications',
+                  tooltip: 'notifications'.tr(),
                   icon: const Icon(Icons.notifications_none_outlined, color: Colors.black87),
                   onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationScreen())),
                 ),
@@ -101,7 +104,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   const SizedBox(height: 40),
 
                   // Management Grid
-                  const Text('Ecosystem Management', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
+                  Text('plannings_title'.tr(), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
+                  const SizedBox(height: 15),
+                  _buildActionTile('create_plannings_title'.tr(), 'build_professor_schedules'.tr(), Icons.calendar_view_week, Colors.orangeAccent, () => Navigator.push(context, MaterialPageRoute(builder: (context) => const CreatePlanningsScreen()))),
+                  const SizedBox(height: 30),
+
+                  Text('ecosystem_management'.tr(), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
                   const SizedBox(height: 15),
                   _buildManagementGrid(),
 
@@ -126,7 +134,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Welcome back,', style: TextStyle(color: AppColors.grayText, fontSize: 13)),
+            Text('welcome_back'.tr(), style: const TextStyle(color: AppColors.grayText, fontSize: 13)),
             Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.black87)),
           ],
         ),
@@ -159,11 +167,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Active Sessions', style: TextStyle(color: Colors.white70, fontSize: 14)),
+                  Text('active_sessions_count'.tr(), style: const TextStyle(color: Colors.white70, fontSize: 14)),
                   const SizedBox(height: 4),
                   Text(stats['activeSessions']?.toString() ?? '0', style: const TextStyle(color: Colors.white, fontSize: 42, fontWeight: FontWeight.bold, height: 1.0)),
                   const SizedBox(height: 4),
-                  const Text('Real-time monitoring', style: TextStyle(color: Colors.white60, fontSize: 12)),
+                  Text('realtime_monitor'.tr(), style: const TextStyle(color: Colors.white60, fontSize: 12)),
                 ],
               ),
               const Icon(Icons.flash_on_rounded, color: Colors.white, size: 52),
@@ -175,9 +183,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
         // Row 1: Professors & Students
         Row(
           children: [
-            _buildStatCard('Professors', provider.totalProfessors.toString(), Icons.school, const Color(0xFF6C63FF)),
+            _buildStatCard('professors_label'.tr(), provider.totalProfessors.toString(), Icons.school, const Color(0xFF6C63FF)),
             const SizedBox(width: 12),
-            _buildStatCard('Students', provider.totalStudents.toString(), Icons.school_outlined, AppColors.primaryTeal),
+            _buildStatCard('students_label'.tr(), provider.totalStudents.toString(), Icons.school_outlined, AppColors.primaryTeal),
           ],
         ),
         const SizedBox(height: 12),
@@ -185,9 +193,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
         // Row 2: Groups & Today Sessions
         Row(
           children: [
-            _buildStatCard('Groups', provider.totalGroups.toString(), Icons.people_alt, const Color(0xFFFF9800)),
+            _buildStatCard('groups_label'.tr(), provider.totalGroups.toString(), Icons.people_alt, const Color(0xFFFF9800)),
             const SizedBox(width: 12),
-            _buildStatCard('Today Sessions', provider.todaySessions.toString(), Icons.event_available, const Color(0xFF2196F3)),
+            _buildStatCard('today_sessions_label'.tr(), provider.todaySessions.toString(), Icons.event_available, const Color(0xFF2196F3)),
           ],
         ),
         const SizedBox(height: 12),
@@ -195,9 +203,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
         // Row 3: Attendance & Security Alerts
         Row(
           children: [
-            _buildStatCard('Today Attendance', provider.todayAttendance.toString(), Icons.check_circle_outline, Colors.green),
+            _buildStatCard('today_attendance'.tr(), provider.todayAttendance.toString(), Icons.check_circle_outline, Colors.green),
             const SizedBox(width: 12),
-            _buildStatCard('Security Alerts', stats['unauthorizedToday']?.toString() ?? '0', Icons.gpp_maybe, Colors.redAccent),
+            _buildStatCard('security_alerts'.tr(), stats['unauthorizedToday']?.toString() ?? '0', Icons.gpp_maybe, Colors.redAccent),
           ],
         ),
         const SizedBox(height: 12),
@@ -205,9 +213,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
         // Row 4: Total Users & Active Labs
         Row(
           children: [
-            _buildStatCard('Total Users', stats['totalUsers']?.toString() ?? '0', Icons.people_outline, Colors.blueGrey),
+            _buildStatCard('total_users'.tr(), stats['totalUsers']?.toString() ?? '0', Icons.people_outline, Colors.blueGrey),
             const SizedBox(width: 12),
-            _buildStatCard('Active Labs', activeLabs.toString(), Icons.science_outlined, Colors.orange),
+            _buildStatCard('active_labs_count'.tr(), activeLabs.toString(), Icons.science_outlined, Colors.orange),
           ],
         ),
         const SizedBox(height: 16),
@@ -227,7 +235,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Attendance Rate Today', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87)),
+                  Text('attendance_rate_today'.tr(), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87)),
                   Text('${provider.attendanceRate.toInt()}%', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primaryTeal)),
                 ],
               ),
@@ -242,7 +250,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 ),
               ),
               const SizedBox(height: 10),
-              Text('${provider.todayAttendance} students present today', style: const TextStyle(fontSize: 12, color: AppColors.grayText)),
+              Text('students_present_today'.tr(args: [provider.todayAttendance.toString()]), style: const TextStyle(fontSize: 12, color: AppColors.grayText)),
             ],
           ),
         ),
@@ -279,10 +287,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
   Widget _buildManagementGrid() {
     return Column(
       children: [
-        _buildActionTile('Manage Users', 'Manage accounts', Icons.people_outline, Colors.blueAccent, () => Navigator.push(context, MaterialPageRoute(builder: (context) => const ManageUsersScreen()))),
-        _buildActionTile('Manage Labs', 'Rooms and access', Icons.science_outlined, AppColors.primaryTeal, () => Navigator.push(context, MaterialPageRoute(builder: (context) => const ManageLabsScreen()))),
-        _buildActionTile('Manage Groups', 'Specialties and Afouaj', Icons.groups_outlined, Colors.purpleAccent, () => Navigator.push(context, MaterialPageRoute(builder: (context) => const ManageGroupsScreen()))),
-        _buildActionTile('Security Alerts', 'Intrusion logs', Icons.gpp_maybe_outlined, Colors.redAccent, () => Navigator.push(context, MaterialPageRoute(builder: (context) => const UnauthorizedLogsScreen()))),
+        _buildActionTile('manage_users'.tr(), 'manage_accounts_desc'.tr(), Icons.people_outline, Colors.blueAccent, () => Navigator.push(context, MaterialPageRoute(builder: (context) => const ManageUsersScreen()))),
+        _buildActionTile('manage_labs_title'.tr(), 'rooms_and_access_desc'.tr(), Icons.science_outlined, AppColors.primaryTeal, () => Navigator.push(context, MaterialPageRoute(builder: (context) => const ManageLabsScreen()))),
+        _buildActionTile('manage_groups_title'.tr(), 'specialties_and_afouaj_desc'.tr(), Icons.groups_outlined, Colors.purpleAccent, () => Navigator.push(context, MaterialPageRoute(builder: (context) => const ManageGroupsScreen()))),
+        _buildActionTile('security_alerts_title'.tr(), 'intrusion_logs_desc'.tr(), Icons.gpp_maybe_outlined, Colors.redAccent, () => Navigator.push(context, MaterialPageRoute(builder: (context) => const UnauthorizedLogsScreen()))),
       ],
     );
   }
@@ -313,8 +321,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Security Status', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.redAccent)),
-                Text('$alertsCount Intrusion attempts today', style: const TextStyle(fontSize: 12, color: Colors.redAccent)),
+                Text('security_status'.tr(), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.redAccent)),
+                Text('$alertsCount ' + 'intrusion_attempts_today'.tr(), style: const TextStyle(fontSize: 12, color: Colors.redAccent)),
               ],
             ),
           ),
@@ -330,12 +338,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Logout'),
-        content: const Text('Are you sure you want to log out?'),
+        title: Text('logout_title'.tr()),
+        content: Text('logout_confirm_msg'.tr()),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
+            child: Text('cancel'.tr()),
           ),
           TextButton(
             onPressed: () async {
@@ -349,10 +357,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 );
               }
             },
-            child: const Text('Logout', style: TextStyle(color: Colors.redAccent)),
+            child: Text('logout_title'.tr(), style: const TextStyle(color: Colors.redAccent)),
           ),
         ],
       ),
     );
   }
 }
+

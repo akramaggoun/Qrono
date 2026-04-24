@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../providers/presence_provider.dart';
 import 'confirm_presence_screen.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class ScannerScreen extends StatefulWidget {
   const ScannerScreen({super.key});
@@ -74,7 +75,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
           );
         } else if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(presenceProvider.errorMessage ?? "Erreur de scan"),
+            content: Text(presenceProvider.errorMessage ?? 'scan_error'.tr()),
             backgroundColor: Colors.redAccent,
           ));
           // Redémarrer le scan après une brève pause
@@ -91,7 +92,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
-        title: const Text('Scanner QR Code', style: TextStyle(color: Colors.white)),
+        title: Text('scan_qr'.tr(), style: const TextStyle(color: Colors.white)),
         backgroundColor: Colors.transparent,
         elevation: 0,
         iconTheme: const IconThemeData(color: AppColors.primaryTeal),
@@ -110,14 +111,14 @@ class _ScannerScreenState extends State<ScannerScreen> {
                     children: [
                       const Icon(Icons.camera_alt_outlined, color: Colors.white, size: 64),
                       const SizedBox(height: 16),
-                      const Text(
-                        'Accès caméra requis pour scanner',
-                        style: TextStyle(color: Colors.white),
+                      Text(
+                        'camera_access_required'.tr(),
+                        style: const TextStyle(color: Colors.white),
                       ),
                       const SizedBox(height: 24),
                       ElevatedButton(
                         onPressed: _checkPermission,
-                        child: const Text('ACCORDER L\'AUTORISATION'),
+                        child: Text('grant_permission'.tr()),
                       ),
                     ],
                   ),
@@ -141,8 +142,8 @@ class _ScannerScreenState extends State<ScannerScreen> {
             right: 0,
             child: Column(
               children: [
-                const Text(
-                  'Placez le code QR dans le cadre',
+                Text(
+                  'place_qr_in_frame'.tr(),
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: Colors.white,

@@ -4,6 +4,7 @@ import '../../core/constants/app_colors.dart';
 import '../../providers/notification_provider.dart';
 import '../../models/notification_model.dart';
 import 'package:intl/intl.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class NotificationScreen extends StatefulWidget {
   const NotificationScreen({super.key});
@@ -33,19 +34,19 @@ class _NotificationScreenState extends State<NotificationScreen> {
         backgroundColor: Colors.white,
         centerTitle: false,
         iconTheme: const IconThemeData(color: primaryColor),
-        title: const Column(
+        title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Message Center', 
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: primaryColor)),
-            Text('Recent alerts and updates', 
-              style: TextStyle(fontSize: 12, color: Color(0xFF6C757D), fontWeight: FontWeight.w500)),
+            Text('message_center'.tr(), 
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: primaryColor)),
+            Text('recent_alerts_updates'.tr(), 
+              style: const TextStyle(fontSize: 12, color: Color(0xFF6C757D), fontWeight: FontWeight.w500)),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Provider.of<NotificationProvider>(context, listen: false).markAllAsRead(),
-            child: const Text('Read All', style: TextStyle(color: AppColors.primaryTeal, fontWeight: FontWeight.bold)),
+            child: Text('read_all'.tr(), style: const TextStyle(color: AppColors.primaryTeal, fontWeight: FontWeight.bold)),
           ),
           const SizedBox(width: 8),
         ],
@@ -63,8 +64,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
                 children: [
                   Icon(Icons.notifications_off_rounded, size: 80, color: Colors.grey.withOpacity(0.2)),
                   const SizedBox(height: 16),
-                  const Text('No notifications yet', 
-                    style: TextStyle(color: Color(0xFF9E9E9E), fontSize: 16, fontWeight: FontWeight.w500)),
+                  Text('no_notifications_yet'.tr(), 
+                    style: const TextStyle(color: Color(0xFF9E9E9E), fontSize: 16, fontWeight: FontWeight.w500)),
                 ],
               ),
             );
@@ -162,7 +163,7 @@ class _NotificationCard extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(color: AppColors.primaryTeal.withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
-                        child: const Text('NEW', style: TextStyle(color: AppColors.primaryTeal, fontSize: 9, fontWeight: FontWeight.w900)),
+                        child: Text('new_badge'.tr(), style: const TextStyle(color: AppColors.primaryTeal, fontSize: 9, fontWeight: FontWeight.w900)),
                       ),
                     ],
                   ],
@@ -216,9 +217,9 @@ class _NotificationCard extends StatelessWidget {
     final difference = now.difference(date);
 
     if (difference.inMinutes < 60) {
-      return '${difference.inMinutes}m ago';
+      return '${difference.inMinutes}${'mins_ago'.tr()}';
     } else if (difference.inHours < 24) {
-      return '${difference.inHours}h ago';
+      return '${difference.inHours}${'hours_ago'.tr()}';
     } else {
       return DateFormat('MMM dd').format(date);
     }

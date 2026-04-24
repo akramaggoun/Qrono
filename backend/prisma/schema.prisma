@@ -121,6 +121,7 @@ model Student {
   group            Group?                  @relation(fields: [groupId], references: [id], onDelete: SetNull)
   attendance       Attendance[]
   unauthorizedLogs UnauthorizedAccessLog[]
+  exclusions       Exclusion[]
 
   @@map("students")
 }
@@ -137,6 +138,7 @@ model Professor {
   user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   sessions  Session[]
   schedules Schedule[]
+  exclusions Exclusion[]
 
   @@map("professors")
 }
@@ -259,4 +261,19 @@ model Notification {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("notifications")
+}
+
+model Exclusion {
+  id          String   @id @default(uuid())
+  studentId   String   @map("student_id")
+  professorId String   @map("professor_id")
+  courseName  String   @map("course_name")
+  reason      String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  student   Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  professor Professor @relation(fields: [professorId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, professorId, courseName])
+  @@map("exclusions")
 }

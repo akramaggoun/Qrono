@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../student/student_dashboard.dart';
 import '../professor/professor_dashboard.dart';
 import '../admin/admin_dashboard.dart';
 import '../../core/constants/app_colors.dart';
 import '../../providers/auth_provider.dart';
+import '../../widgets/language_selector.dart';
+import '../../widgets/wireless_settings_tab.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -49,7 +52,7 @@ class _LoginScreenState extends State<LoginScreen> {
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const AdminDashboard()));
       }
     } else if (mounted) {
-      _showError(authProvider.errorMessage ?? 'Identifiants incorrects. Réessayez.');
+      _showError(authProvider.errorMessage ?? context.tr('incorrect_credentials'));
     }
   }
 
@@ -77,126 +80,156 @@ class _LoginScreenState extends State<LoginScreen> {
     final authProvider = Provider.of<AuthProvider>(context);
     const bgColor = Color(0xFFF8FAFB);
 
-    return Scaffold(
-      backgroundColor: bgColor,
-      body: SafeArea(
-        child: Form(
-          key: _formKey,
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 32.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 60),
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        backgroundColor: bgColor,
+        body: SafeArea(
+          child: Column(
+            children: [
+              // Language Selector (Top Right)
+              Padding(
+                padding: const EdgeInsets.only(right: 32.0, top: 16.0),
+                child: Align(
+                  alignment: Alignment.topRight,
+                  child: const LanguageSelectorButton(),
+                ),
+              ),
 
-                Center(
-                  child: Column(
-                    children: [
-                      Container(
-                        height: 100, width: 100,
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [AppColors.primaryTeal, Color(0xFF00695C)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(30),
-                          boxShadow: [
-                            BoxShadow(color: AppColors.primaryTeal.withOpacity(0.4), blurRadius: 25, offset: const Offset(0, 12)),
-                          ],
+              // Header Section (Logo & Title)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32.0),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 20),
+                    Container(
+                      height: 80, width: 80,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [AppColors.primaryTeal, Color(0xFF00695C)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
                         ),
-                        child: const Icon(Icons.qr_code_scanner_rounded, size: 56, color: Colors.white),
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [
+                          BoxShadow(color: AppColors.primaryTeal.withOpacity(0.3), blurRadius: 20, offset: const Offset(0, 8)),
+                        ],
                       ),
-                      const SizedBox(height: 24),
-                      const Text(
-                        'QRONO',
-                        style: TextStyle(fontSize: 34, fontWeight: FontWeight.w900, letterSpacing: 6, color: Color(0xFF1A1C1E)),
-                      ),
-                      const SizedBox(height: 4),
-                      const Text(
-                        'PRECISION ATTENDANCE',
-                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: AppColors.grayText, letterSpacing: 2),
-                      ),
+                      child: const Icon(Icons.qr_code_scanner_rounded, size: 44, color: Colors.white),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'QRONO',
+                      style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, letterSpacing: 4, color: Color(0xFF1A1C1E)),
+                    ),
+                    const Text(
+                      'PRECISION ATTENDANCE',
+                      style: TextStyle(fontSize: 8, fontWeight: FontWeight.w800, color: AppColors.grayText, letterSpacing: 1.5),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 32),
+
+              // TabBar
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32.0),
+                child: Container(
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  child: TabBar(
+                    indicator: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      color: AppColors.primaryTeal,
+                      boxShadow: [
+                        BoxShadow(color: AppColors.primaryTeal.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4)),
+                      ],
+                    ),
+                    labelColor: Colors.white,
+                    unselectedLabelColor: AppColors.grayText,
+                    labelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13, letterSpacing: 0.5),
+                    indicatorSize: TabBarIndicatorSize.tab,
+                    dividerColor: Colors.transparent,
+                    tabs: [
+                      Tab(text: 'sign_in'.tr().toUpperCase()),
+                      Tab(text: 'connection'.tr().toUpperCase()),
                     ],
                   ),
                 ),
-                const SizedBox(height: 60),
+              ),
 
-                const Text('Login to Continue', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: Color(0xFF1A1C1E))),
-                const SizedBox(height: 8),
-                const Text('Enter your credentials to access the portal', style: TextStyle(fontSize: 13, color: AppColors.grayText, fontWeight: FontWeight.w500)),
-                const SizedBox(height: 32),
-
-                _buildTextField(
-                  controller: _matriculeController,
-                  label: 'URN or Email',
-                  hint: '202312345',
-                  icon: Icons.badge_rounded,
-                  validator: (val) => (val == null || val.isEmpty) ? 'Required field' : null,
-                ),
-                const SizedBox(height: 20),
-
-                _buildTextField(
-                  controller: _passwordController,
-                  label: 'Password',
-                  hint: '••••••••',
-                  icon: Icons.lock_rounded,
-                  isPassword: true,
-                  validator: (val) => (val == null || val.isEmpty) ? 'Required field' : null,
-                ),
-                const SizedBox(height: 40),
-
-                SizedBox(
-                  width: double.infinity,
-                  height: 58,
-                  child: ElevatedButton(
-                    onPressed: authProvider.isLoading ? null : _handleLogin,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primaryTeal,
-                      foregroundColor: Colors.white,
-                      elevation: 8,
-                      shadowColor: AppColors.primaryTeal.withOpacity(0.4),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-                    ),
-                    child: authProvider.isLoading
-                        ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(strokeWidth: 3, color: Colors.white))
-                        : const Text('SIGN IN', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, letterSpacing: 1.5)),
-                  ),
-                ),
-                const SizedBox(height: 40),
-
-                Row(
+              // TabBarView content
+              Expanded(
+                child: TabBarView(
                   children: [
-                    const Expanded(child: Divider(thickness: 1, color: Color(0xFFECEFF1))),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Text('EXPLORE AS', style: TextStyle(color: Colors.grey.shade400, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 1.5)),
+                    // Login Tab
+                    SingleChildScrollView(
+                      padding: const EdgeInsets.all(32.0),
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('login_to_continue'.tr(), style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Color(0xFF1A1C1E))),
+                            const SizedBox(height: 6),
+                            Text('enter_credentials'.tr(), style: const TextStyle(fontSize: 13, color: AppColors.grayText, fontWeight: FontWeight.w500)),
+                            const SizedBox(height: 32),
+                            _buildTextField(
+                              controller: _matriculeController,
+                              labelKey: 'urn_email',
+                              hint: '202312345',
+                              icon: Icons.badge_rounded,
+                              validator: (val) => (val == null || val.isEmpty) ? 'required_field'.tr() : null,
+                            ),
+                            const SizedBox(height: 20),
+                            _buildTextField(
+                              controller: _passwordController,
+                              labelKey: 'password',
+                              hint: '••••••••',
+                              icon: Icons.lock_rounded,
+                              isPassword: true,
+                              validator: (val) => (val == null || val.isEmpty) ? 'required_field'.tr() : null,
+                            ),
+                            const SizedBox(height: 40),
+                            SizedBox(
+                              width: double.infinity,
+                              height: 58,
+                              child: ElevatedButton(
+                                onPressed: authProvider.isLoading ? null : _handleLogin,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primaryTeal,
+                                  foregroundColor: Colors.white,
+                                  elevation: 8,
+                                  shadowColor: AppColors.primaryTeal.withOpacity(0.4),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                                ),
+                                child: authProvider.isLoading
+                                    ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(strokeWidth: 3, color: Colors.white))
+                                    : Text('sign_in'.tr(), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, letterSpacing: 1.5)),
+                              ),
+                            ),
+                            const SizedBox(height: 40),
+                            Center(
+                              child: Text('version'.tr(),
+                                style: TextStyle(fontSize: 10, color: Colors.grey.shade400, fontWeight: FontWeight.w600, letterSpacing: 0.5)),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
-                    const Expanded(child: Divider(thickness: 1, color: Color(0xFFECEFF1))),
+
+                    // Connection Tab
+                    const SingleChildScrollView(
+                      padding: EdgeInsets.all(32.0),
+                      child: WirelessSettingsTab(),
+                    ),
                   ],
                 ),
-                const SizedBox(height: 20),
-
-                Row(
-                  children: [
-                    _buildRoleButton('Student', Icons.school_rounded, AppColors.primaryTeal, () {
-                      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const StudentDashboard()));
-                    }),
-                    const SizedBox(width: 12),
-                    _buildRoleButton('Professor', Icons.assignment_ind_rounded, Colors.blueAccent, () {
-                      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const ProfessorDashboard()));
-                    }),
-                  ],
-                ),
-                const SizedBox(height: 40),
-
-                Center(
-                  child: Text('Version 2.0.1 • Precision Lab Sync', 
-                    style: TextStyle(fontSize: 10, color: Colors.grey.shade400, fontWeight: FontWeight.w600, letterSpacing: 0.5)),
-                ),
-                const SizedBox(height: 20),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -205,7 +238,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Widget _buildTextField({
     required TextEditingController controller,
-    required String label,
+    required String labelKey,
     required String hint,
     required IconData icon,
     bool isPassword = false,
@@ -224,7 +257,7 @@ class _LoginScreenState extends State<LoginScreen> {
         obscureText: isPassword && !_isPasswordVisible,
         style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF1A1C1E)),
         decoration: InputDecoration(
-          labelText: label,
+          labelText: labelKey.tr(),
           hintText: hint,
           prefixIcon: Icon(icon, color: AppColors.primaryTeal, size: 20),
           suffixIcon: isPassword ? IconButton(
@@ -237,31 +270,6 @@ class _LoginScreenState extends State<LoginScreen> {
           contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
         ),
         validator: validator,
-      ),
-    );
-  }
-
-  Widget _buildRoleButton(String role, IconData icon, Color color, VoidCallback onTap) {
-    return Expanded(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: color.withOpacity(0.1), width: 1.5),
-            boxShadow: [BoxShadow(color: color.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, 4))],
-          ),
-          child: Column(
-            children: [
-              Icon(icon, color: color, size: 28),
-              const SizedBox(height: 8),
-              Text(role, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: color)),
-            ],
-          ),
-        ),
       ),
     );
   }
