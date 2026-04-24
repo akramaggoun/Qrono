@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
-import 'notifications_screen.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../notification_screen.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/notification_provider.dart';
+import '../../providers/presence_provider.dart';
+import '../../providers/session_provider.dart';
 import '../auth/login_screen.dart';
-import '../../providers/admin_provider.dart';
 import '../../core/constants/app_colors.dart';
 import 'scanner_screen.dart';
 import 'my_attendance_screen.dart';
+import '../../core/config/api_config.dart';
 
 class StudentDashboard extends StatefulWidget {
   const StudentDashboard({super.key});
@@ -18,206 +20,246 @@ class StudentDashboard extends StatefulWidget {
 }
 
 class _StudentDashboardState extends State<StudentDashboard> {
-  final int _presentCount = 0;
-  final int _totalCount = 20;
-
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<NotificationProvider>(context, listen: false).fetchNotifications();
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final notifProvider = Provider.of<NotificationProvider>(context, listen: false);
+      
+      if (authProvider.userId != null) {
+        notifProvider.initSocket(authProvider.userId!);
+      }
+      
+      notifProvider.fetchNotifications();
+      Provider.of<PresenceProvider>(context, listen: false).fetchMyAttendances();
+      Provider.of<SessionProvider>(context, listen: false).fetchStudentSessions();
     });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: const Color(0xFFF8FAFB),
       appBar: AppBar(
-        title: const Column(
+        elevation: 0,
+        backgroundColor: Colors.white,
+        centerTitle: false,
+        title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Dashboard', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
-            Text('Student', style: TextStyle(fontSize: 11, color: AppColors.grayText)),
+            Text('student_portal'.tr(), 
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF1A1C1E))),
+            Text(Provider.of<AuthProvider>(context).userName ?? 'University Student', 
+              style: const TextStyle(fontSize: 12, color: Color(0xFF6C757D), fontWeight: FontWeight.w500)),
           ],
         ),
         actions: [
+          _buildNotificationIcon(),
+          const SizedBox(width: 8),
           IconButton(
-            tooltip: 'Logout',
-            icon: const Icon(Icons.logout, color: AppColors.primaryTeal),
+            icon: const Icon(Icons.logout_rounded, color: AppColors.primaryTeal),
             onPressed: () => _showLogoutDialog(context),
           ),
-          Consumer<NotificationProvider>(
-            builder: (context, provider, child) => Stack(
-              alignment: Alignment.center,
-              children: [
-                IconButton(
-                  tooltip: 'Notifications',
-                  icon: const Icon(Icons.notifications_none_outlined),
-                  onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationScreen())),
-                ),
-                if (provider.unreadCount > 0)
-                  Positioned(
-                    top: 10, right: 10,
-                    child: Container(
-                      padding: const EdgeInsets.all(2),
-                      decoration: const BoxDecoration(color: Colors.redAccent, shape: BoxShape.circle),
-                      constraints: const BoxConstraints(minWidth: 10, minHeight: 10),
-                      child: Text(
-                        provider.unreadCount > 9 ? '9+' : '${provider.unreadCount}',
-                        style: const TextStyle(color: Colors.white, fontSize: 7, fontWeight: FontWeight.bold),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
+          const SizedBox(width: 8),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildWelcomeHeader(),
-            const SizedBox(height: 25),
-            _buildScanQrCard(),
-            const SizedBox(height: 25),
-            _buildAttendanceProgress(),
-            const SizedBox(height: 25),
-            _buildSectionHeader('Recent Activity', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MyAttendanceScreen()))),
-            const SizedBox(height: 12),
-            // IHM: Empty state for recent activity
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 20),
-                child: Column(
-                  children: [
-                    Icon(Icons.history, color: AppColors.grayText, size: 40),
-                    SizedBox(height: 10),
-                    Text('No recent activity found', style: TextStyle(color: AppColors.grayText, fontSize: 13)),
-                  ],
-                ),
+      body: Consumer<PresenceProvider>(
+        builder: (context, presenceProvider, child) {
+          final attendances = presenceProvider.myAttendances;
+          final presentCount = attendances.length;
+          final totalSessions = Provider.of<SessionProvider>(context).sessions.length; 
+          final totalSessionsSafe = totalSessions == 0 ? 1 : totalSessions; // avoid div by zero
+          if (presenceProvider.isLoading && attendances.isEmpty) {
+            return const Center(child: CircularProgressIndicator(color: AppColors.primaryTeal));
+          }
+
+          return RefreshIndicator(
+            onRefresh: () async {
+              await presenceProvider.fetchMyAttendances();
+              if (mounted) {
+                await Provider.of<SessionProvider>(context, listen: false).fetchStudentSessions();
+              }
+            },
+            color: AppColors.primaryTeal,
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildWelcomeSection(),
+                  const SizedBox(height: 25),
+                  _buildQuickScanCard(context),
+                  const SizedBox(height: 30),
+                  _buildAttendanceIndicator(presentCount, totalSessions),
+                  const SizedBox(height: 30),
+                  _buildStatsSection(presenceProvider),
+                  const SizedBox(height: 30),
+                  _buildSectionHeader('your_recent_presence', 
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MyAttendanceScreen()))),
+                  const SizedBox(height: 15),
+                  _buildActivityList(attendances),
+                ],
               ),
             ),
-            const SizedBox(height: 20),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
 
-  Widget _buildWelcomeHeader() {
+  Widget _buildNotificationIcon() {
+    return Consumer<NotificationProvider>(
+      builder: (context, provider, child) => Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(
+            decoration: BoxDecoration(color: Colors.grey.withOpacity(0.05), shape: BoxShape.circle),
+            child: IconButton(
+              icon: const Icon(Icons.notifications_none_rounded, color: Color(0xFF1A1C1E)),
+              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationScreen())),
+            ),
+          ),
+          if (provider.unreadCount > 0)
+            Positioned(
+              top: 12, right: 12,
+              child: Container(
+                width: 10, height: 10,
+                decoration: BoxDecoration(
+                  color: Colors.redAccent,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 2),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWelcomeSection() {
     final authProvider = Provider.of<AuthProvider>(context);
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Welcome back 👋', style: TextStyle(fontSize: 14, color: AppColors.grayText)),
-            Text(authProvider.userName ?? 'Student', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black87)),
-          ],
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('hello'.tr(), style: TextStyle(fontSize: 16, color: Color(0xFF9E9E9E), fontWeight: FontWeight.w500)),
+              Text(authProvider.userName ?? 'Student', 
+                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Color(0xFF1A1C1E))),
+            ],
+          ),
         ),
-        CircleAvatar(
-          radius: 24,
-          backgroundColor: AppColors.primaryTeal.withOpacity(0.1),
-          child: const Icon(Icons.person, color: AppColors.primaryTeal),
+        Container(
+          height: 56, width: 56,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            gradient: LinearGradient(colors: [AppColors.primaryTeal.withOpacity(0.1), Colors.white]),
+            border: Border.all(color: AppColors.primaryTeal.withOpacity(0.2)),
+          ),
+          child: const Icon(Icons.person_pin_rounded, color: AppColors.primaryTeal, size: 32),
         ),
       ],
     );
   }
 
-  Widget _buildScanQrCard() {
+  Widget _buildQuickScanCard(BuildContext context) {
     return InkWell(
       onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ScannerScreen())),
-      borderRadius: BorderRadius.circular(24),
+      borderRadius: BorderRadius.circular(28),
       child: Container(
-        width: double.infinity,
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(28),
           gradient: const LinearGradient(
-            colors: [AppColors.primaryTeal, Color(0xFF00897B)],
+            colors: [AppColors.primaryTeal, Color(0xFF00796B)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [BoxShadow(color: AppColors.primaryTeal.withOpacity(0.35), blurRadius: 20, offset: const Offset(0, 10))],
+          boxShadow: [
+            BoxShadow(color: AppColors.primaryTeal.withOpacity(0.3), blurRadius: 20, offset: const Offset(0, 10))
+          ],
         ),
         child: Row(
           children: [
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(18)),
-              child: const Icon(Icons.qr_code_scanner, color: Colors.white, size: 36),
+            const CircleAvatar(
+              radius: 28,
+              backgroundColor: Colors.white24,
+              child: Icon(Icons.qr_code_scanner_rounded, color: Colors.white, size: 30),
             ),
-            const SizedBox(width: 18),
+            const SizedBox(width: 20),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Scan QR Code', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                  Text('confirm_presence_title'.tr(), 
+                    style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
                   const SizedBox(height: 4),
-                  const Text('Tap to activate camera', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                  Text('tap_to_scan'.tr(), 
+                    style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500)),
                 ],
               ),
             ),
-            const Icon(Icons.arrow_forward_ios, color: Colors.white70, size: 16),
+            const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 20),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildAttendanceProgress() {
-    double ratio = _totalCount > 0 ? (_presentCount / _totalCount) : 0.0;
-    Color progressColor = ratio >= 0.75 ? Colors.green : (ratio >= 0.5 ? Colors.orange : Colors.redAccent);
-
+  Widget _buildAttendanceIndicator(int present, int total) {
+    double progress = total > 0 ? (present / total) : 0.0;
+    
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.cardColor,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.borderColor, width: 0.5),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 12, offset: const Offset(0, 6))
+        ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Attendance Rate', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-              Text('This semester', style: TextStyle(fontSize: 12, color: AppColors.grayText)),
-            ],
-          ),
-          const SizedBox(height: 14),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: LinearProgressIndicator(
-              value: ratio,
-              backgroundColor: Colors.grey.shade200,
-              valueColor: AlwaysStoppedAnimation<Color>(progressColor),
-              minHeight: 10,
-            ),
-          ),
-          const SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              RichText(
-                text: TextSpan(
-                  children: [
-                    TextSpan(text: '$_presentCount', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: progressColor)),
-                    const TextSpan(text: ' / 20 sessions', style: TextStyle(fontSize: 13, color: AppColors.grayText)),
-                  ],
+              Text('attendance_overview'.tr(), 
+                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Stack(
+            children: [
+              Container(height: 12, decoration: BoxDecoration(color: Colors.grey.withOpacity(0.08), borderRadius: BorderRadius.circular(6))),
+              AnimatedContainer(
+                duration: const Duration(seconds: 1),
+                height: 12, width: MediaQuery.of(context).size.width * 0.7 * progress,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(colors: [AppColors.primaryTeal, Color(0xFF4DB6AC)]),
+                  borderRadius: BorderRadius.circular(6),
+                  boxShadow: [BoxShadow(color: Colors.teal.withOpacity(0.2), blurRadius: 6, offset: const Offset(0, 3))]
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(color: progressColor.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
-                child: Text('${(ratio * 100).round()}%', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: progressColor)),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('$present / $total ${'sessions_done'.tr()}', 
+                    style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: Color(0xFF1A1C1E))),
+                  Text('total_present_semester'.tr(), 
+                    style: TextStyle(fontSize: 11, color: Color(0xFF9E9E9E), fontWeight: FontWeight.w500)),
+                ],
               ),
+              Text('${(progress * 100).round()}%', 
+                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: AppColors.primaryTeal)),
             ],
           ),
         ],
@@ -225,46 +267,170 @@ class _StudentDashboardState extends State<StudentDashboard> {
     );
   }
 
-  Widget _buildSectionHeader(String title, {VoidCallback? onTap}) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  Widget _buildStatsSection(PresenceProvider provider) {
+    final sessionProvider = Provider.of<SessionProvider>(context);
+    final totalScheduled = sessionProvider.sessions.length;
+    final absences = totalScheduled - provider.myAttendances.length;
+    final absencesSafe = absences < 0 ? 0 : absences;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.black87)),
-        if (onTap != null)
-          GestureDetector(
-            onTap: onTap,
-            child: const Text('See All →', style: TextStyle(color: AppColors.primaryTeal, fontSize: 13, fontWeight: FontWeight.w600)),
-          ),
+        _buildSectionHeader('statistics_title'),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: _buildStatCard(
+                'attendance_streak'.tr(), 
+                'days_streak'.tr(args: [provider.streak.toString()]),
+                Icons.local_fire_department_rounded,
+                Colors.orange,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildStatCard(
+                'absences_count'.tr(), 
+                'total_absences'.tr(args: [absencesSafe.toString()]),
+                Icons.event_busy_rounded,
+                Colors.redAccent,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _buildStatCard(
+                'top_course'.tr(), 
+                provider.topCourse,
+                Icons.emoji_events_rounded,
+                Colors.amber,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildStatCard(
+                'weekly_attendance'.tr(), 
+                'sessions_this_week'.tr(args: [provider.sessionsThisWeek.toString()]),
+                Icons.bar_chart_rounded,
+                AppColors.primaryTeal,
+              ),
+            ),
+          ],
+        ),
       ],
     );
   }
 
-  Widget _buildRecentItem(String title, String subtitle, IconData icon, Color iconColor) {
+  Widget _buildStatCard(String title, String value, IconData icon, Color color, {bool isFullWidth = false}) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.cardColor,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.borderColor, width: 0.5),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))
+        ],
       ),
       child: Row(
         children: [
-          Icon(icon, color: iconColor, size: 22),
-          const SizedBox(width: 14),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(color: color.withOpacity(0.1), shape: BoxShape.circle),
+            child: Icon(icon, color: color, size: 24),
+          ),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: Colors.black87)),
+                Text(title, style: TextStyle(fontSize: 11, color: Colors.grey.shade600, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 2),
-                Text(subtitle, style: const TextStyle(fontSize: 12, color: AppColors.grayText)),
+                Text(value, 
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Color(0xFF1A1C1E)),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ],
             ),
           ),
-          const Icon(Icons.chevron_right, color: AppColors.grayText, size: 18),
         ],
       ),
+    );
+  }
+
+  Widget _buildSectionHeader(String titleKey, {VoidCallback? onTap}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(titleKey.tr(), 
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF1A1C1E))),
+        if (onTap != null)
+          TextButton(onPressed: onTap, child: Text('statistics_title'.tr(), style: const TextStyle(color: AppColors.primaryTeal, fontWeight: FontWeight.bold))),
+      ],
+    );
+  }
+
+  Widget _buildActivityList(List attendances) {
+    if (attendances.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 40),
+          child: Column(
+            children: [
+              Icon(Icons.history_toggle_off_rounded, size: 64, color: Colors.grey.withOpacity(0.2)),
+              const SizedBox(height: 16),
+              Text('no_presence_recorded'.tr(), 
+                style: TextStyle(color: Color(0xFF9E9E9E), fontSize: 14, fontWeight: FontWeight.w500)),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: attendances.take(5).length,
+      itemBuilder: (context, index) {
+        final a = attendances[index];
+        final session = a['session'] ?? {};
+        
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 8, offset: const Offset(0, 4))],
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(color: Colors.green.withOpacity(0.08), shape: BoxShape.circle),
+                child: const Icon(Icons.check_circle_rounded, color: Colors.green, size: 24),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(session['courseName'] ?? 'academic_session'.tr(), 
+                      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: Color(0xFF1A1C1E))),
+                    const SizedBox(height: 4),
+                    Text('${session['lab']?['name'] ?? 'laboratory_title'.tr()} • ${'room'.tr()} ${session['lab']?['roomNumber'] ?? 'na'.tr()}',  
+                      style: const TextStyle(fontSize: 12, color: Color(0xFF6C757D), fontWeight: FontWeight.w500)),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right_rounded, color: Color(0xFFCFD8DC)),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -272,13 +438,11 @@ class _StudentDashboardState extends State<StudentDashboard> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Logout'),
-        content: const Text('Are you sure you want to log out?'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('logout_title'.tr()),
+        content: Text('logout_confirm_msg'.tr()),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('cancel'.tr())),
           TextButton(
             onPressed: () async {
               Navigator.pop(ctx);
@@ -291,10 +455,12 @@ class _StudentDashboardState extends State<StudentDashboard> {
                 );
               }
             },
-            child: const Text('Logout', style: TextStyle(color: Colors.redAccent)),
+            child: Text('logout'.tr(), style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
     );
   }
 }
+
+

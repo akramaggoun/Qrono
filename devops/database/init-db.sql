@@ -67,6 +67,21 @@ CREATE TABLE admins (
 );
 
 -- ==============================================
+-- SCHEDULES TABLE
+-- ==============================================
+
+CREATE TABLE schedules (
+    id                   uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name                 varchar(255) NOT NULL,
+    description          text,
+    is_active            boolean   DEFAULT true,
+    created_by_admin_id  uuid NOT NULL REFERENCES users(id)        ON DELETE CASCADE,
+    professor_id         uuid NOT NULL REFERENCES professors(id)   ON DELETE CASCADE,
+    created_at           timestamp DEFAULT CURRENT_TIMESTAMP,
+    updated_at           timestamp DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ==============================================
 -- DEPENDENT TABLES
 -- ==============================================
 
@@ -77,9 +92,11 @@ CREATE TABLE sessions (
     end_time     timestamp NOT NULL,
     is_recurring boolean DEFAULT false,
     recurrence   jsonb,
+    schedule_id  uuid REFERENCES schedules(id) ON DELETE SET NULL,
     professor_id uuid NOT NULL REFERENCES professors(id) ON DELETE CASCADE,
     group_id     uuid NOT NULL REFERENCES groups(id)     ON DELETE CASCADE,
     lab_id       uuid NOT NULL REFERENCES laboratories(id) ON DELETE CASCADE,
+    status       varchar(20) DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE', 'CLOSED')),
     created_at   timestamp DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT chk_end_after_start CHECK (end_time > start_time)
 );
@@ -138,15 +155,18 @@ CREATE TABLE notifications (
 CREATE UNIQUE INDEX idx_active_qr_per_session
     ON qr_codes(session_id) WHERE is_revoked = false;
 
-CREATE INDEX idx_sessions_professor ON sessions(professor_id);
-CREATE INDEX idx_sessions_start     ON sessions(start_time);
-CREATE INDEX idx_attendance_session ON attendance(session_id);
-CREATE INDEX idx_attendance_student ON attendance(student_id);
-CREATE INDEX idx_unauth_occurred    ON unauthorized_access_logs(occurred_at DESC);
-CREATE INDEX idx_notifications_user ON notifications(user_id, is_read, created_at DESC);
+CREATE INDEX idx_schedules_admin      ON schedules(created_by_admin_id);
+CREATE INDEX idx_schedules_professor  ON schedules(professor_id);
+CREATE INDEX idx_sessions_schedule    ON sessions(schedule_id);
+CREATE INDEX idx_sessions_professor   ON sessions(professor_id);
+CREATE INDEX idx_sessions_start       ON sessions(start_time);
+CREATE INDEX idx_attendance_session   ON attendance(session_id);
+CREATE INDEX idx_attendance_student   ON attendance(student_id);
+CREATE INDEX idx_unauth_occurred      ON unauthorized_access_logs(occurred_at DESC);
+CREATE INDEX idx_notifications_user   ON notifications(user_id, is_read, created_at DESC);
 
 -- ==============================================
--- AUTO-UPDATE updated_at ON users
+-- AUTO-UPDATE updated_at ON users & schedules
 -- ==============================================
 
 CREATE OR REPLACE FUNCTION update_updated_at()
@@ -159,4 +179,8 @@ $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER trg_users_updated_at
     BEFORE UPDATE ON users
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+CREATE TRIGGER trg_schedules_updated_at
+    BEFORE UPDATE ON schedules
     FOR EACH ROW EXECUTE FUNCTION update_updated_at();

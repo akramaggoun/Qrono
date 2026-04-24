@@ -1,0 +1,19 @@
+# Replace <TUNNEL_ID> with your actual tunnel ID from: cloudflared tunnel list
+tunnel: <TUNNEL_ID>
+credentials-file: ./<TUNNEL_ID>.json
+
+ingress:
+  # Backend API
+  - hostname: qrono-api.yourdomain.com
+    service: http://localhost:3000
+    originRequest:
+      noTLSVerify: true
+
+  # Flutter Web App (if needed)
+  - hostname: qrono-app.yourdomain.com
+    service: http://localhost:8080
+    originRequest:
+      noTLSVerify: true
+
+  # Catch-all
+  - service: http_status:404

@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../models/session_model.dart';
 import '../../providers/session_provider.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class ShowQrScreen extends StatefulWidget {
   final SessionModel session;
@@ -70,14 +71,14 @@ class _ShowQrScreenState extends State<ShowQrScreen> {
     final success = await sessionProvider.closeSession(widget.session.id!); // UML Step 7
 
     if (success && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Session fermée avec succès.'),
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('session_closed_success'.tr()),
         backgroundColor: Colors.green,
       ));
       Navigator.of(context).pop();
     } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Erreur lors de la fermeture de la session.'),
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('session_close_error'.tr()),
         backgroundColor: Colors.redAccent,
       ));
     }
@@ -85,22 +86,12 @@ class _ShowQrScreenState extends State<ShowQrScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final Map<String, dynamic> qrPayload = {
-      'course_name': widget.session.courseName,
-      'lab_id': widget.session.labId,
-      'group_id': widget.session.groupId,
-      'professor_id': widget.session.professorId,
-      'start_time': widget.session.startTime.toIso8601String(),
-      'end_time': widget.session.endTime.toIso8601String(),
-      'session_id': widget.session.id,
-    };
-
-    final String qrData = jsonEncode(qrPayload);
+    final String qrData = widget.session.qrToken ?? "ERROR: NO TOKEN";
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Code QR de la Session'),
+        title: Text('qr_code_session_title'.tr()),
       ),
       body: Center(
         child: SingleChildScrollView(
@@ -124,7 +115,7 @@ class _ShowQrScreenState extends State<ShowQrScreen> {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      _timeLeft.inSeconds > 0 ? 'SESSION ACTIVE' : 'SESSION EXPIRÉE', 
+                      _timeLeft.inSeconds > 0 ? 'session_active'.tr() : 'session_expired'.tr(), 
                       style: TextStyle(
                         color: _timeLeft.inSeconds > 0 ? Colors.green : Colors.red, 
                         fontWeight: FontWeight.bold, 
@@ -152,7 +143,7 @@ class _ShowQrScreenState extends State<ShowQrScreen> {
                 ),
                 child: Column(
                   children: [
-                    const Text('TEMPS RESTANT', style: TextStyle(fontSize: 10, letterSpacing: 1, color: AppColors.grayText)),
+                    Text('time_remaining'.tr(), style: const TextStyle(fontSize: 10, letterSpacing: 1, color: AppColors.grayText)),
                     Text(
                       _formatDuration(_timeLeft),
                       style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.primaryTeal, fontFeatures: [FontFeature.tabularFigures()]),
@@ -193,8 +184,8 @@ class _ShowQrScreenState extends State<ShowQrScreen> {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    const Text(
-                      'SCANNEZ POUR MARQUER LA PRÉSENCE',
+                    Text(
+                      'scan_to_mark_presence'.tr(),
                       style: TextStyle(
                         fontSize: 10,
                         letterSpacing: 1.2,
@@ -211,9 +202,9 @@ class _ShowQrScreenState extends State<ShowQrScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  _buildTimeInfo(Icons.login, 'Début: ${TimeOfDay.fromDateTime(widget.session.startTime).format(context)}'),
+                  _buildTimeInfo(Icons.login, '${'start_time_label'.tr()}${TimeOfDay.fromDateTime(widget.session.startTime).format(context)}'),
                   const SizedBox(width: 30),
-                  _buildTimeInfo(Icons.logout, 'Fin: ${TimeOfDay.fromDateTime(widget.session.endTime).format(context)}'),
+                  _buildTimeInfo(Icons.logout, '${'end_time_label'.tr()}${TimeOfDay.fromDateTime(widget.session.endTime).format(context)}'),
                 ],
               ),
               
@@ -229,7 +220,7 @@ class _ShowQrScreenState extends State<ShowQrScreen> {
                     foregroundColor: Colors.redAccent,
                     elevation: 0,
                   ),
-                  child: const Text('ARRÊTER LA SESSION', style: TextStyle(fontWeight: FontWeight.bold)),
+                  child: Text('stop_session'.tr(), style: const TextStyle(fontWeight: FontWeight.bold)),
                 ),
               ),
             ],

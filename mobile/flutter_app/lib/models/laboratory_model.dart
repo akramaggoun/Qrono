@@ -20,9 +20,9 @@ class LaboratoryModel {
       id: json['id'],
       name: json['name'],
       building: json['building'] ?? '',
-      roomNumber: json['room_number'] ?? '',
+      roomNumber: json['roomNumber'] ?? '',
       capacity: json['capacity'] ?? 0,
-      isActive: json['is_active'] ?? true,
+      isActive: json['isActive'] ?? true,
     );
   }
 
@@ -31,9 +31,9 @@ class LaboratoryModel {
       'id': id,
       'name': name,
       'building': building,
-      'room_number': roomNumber,
+      'roomNumber': roomNumber,
       'capacity': capacity,
-      'is_active': isActive,
+      'isActive': isActive,
     };
   }
 }

@@ -25,8 +25,8 @@ class SessionProvider extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      final labsRes = await _apiClient.get('/api/rooms'); // UML Step 1
-      final groupsRes = await _apiClient.get('/api/groups'); // UML Step 1
+      final labsRes = await _apiClient.get('/laboratories');
+      final groupsRes = await _apiClient.get('/groups');
       
       if (labsRes.statusCode == 200 && groupsRes.statusCode == 200) {
         final List labsData = jsonDecode(labsRes.body)['laboratories'] ?? [];
@@ -46,7 +46,7 @@ class SessionProvider extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      final response = await _apiClient.get('/api/sessions/my-sessions');
+      final response = await _apiClient.get('/sessions/my-sessions');
       if (response.statusCode == 200) {
         final List data = jsonDecode(response.body)['sessions'] ?? [];
         _sessions = data.map((e) => SessionModel.fromJson(e)).toList();
@@ -58,22 +58,48 @@ class SessionProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> fetchStudentSessions() async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final response = await _apiClient.get('/sessions/student-sessions');
+      if (response.statusCode == 200) {
+        final List data = jsonDecode(response.body)['sessions'] ?? [];
+        _sessions = data.map((e) => SessionModel.fromJson(e)).toList();
+      }
+    } catch (e) {
+      _errorMessage = "Erreur sessions étudiant: $e";
+    }
+    _isLoading = false;
+    notifyListeners();
+  }
+
   Future<SessionModel?> createSession(Map<String, dynamic> data) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
     try {
-      final response = await _apiClient.post('/api/sessions', data);
+      final response = await _apiClient.post('/sessions', data);
       _isLoading = false;
       notifyListeners();
 
       if (response.statusCode == 201) {
-        final sessionData = jsonDecode(response.body)['session'];
-        return SessionModel.fromJson(sessionData);
-      } else if (response.statusCode == 409) {
-        _errorMessage = "Le laboratoire est déjà occupé à cette heure.";
+        final body = jsonDecode(response.body);
+        print('📥 SESSION CREATED IN BACKEND: $body');
+        final sessionData = body['session'];
+        try {
+          final session = SessionModel.fromJson(sessionData);
+          print('✅ SESSION PARSED SUCCESSFULLY: ${session.courseName}');
+          return session;
+        } catch (e) {
+          print('❌ ERROR PARSING SESSION MODEL: $e');
+          _errorMessage = "Erreur de formatage des données.";
+          return null;
+        }
       } else {
-        _errorMessage = "Erreur lors de la création de la session.";
+        final errorBody = jsonDecode(response.body);
+        _errorMessage = errorBody['message'] ?? "Erreur lors de la création de la session.";
+        print('❌ SERVER REJECTED SESSION: $_errorMessage');
       }
     } catch (e) {
       _errorMessage = "Une erreur est survenue.";
@@ -85,7 +111,7 @@ class SessionProvider extends ChangeNotifier {
 
   Future<bool> closeSession(String sessionId) async {
     try {
-      final response = await _apiClient.patch('/api/sessions/$sessionId/close', {});
+      final response = await _apiClient.patch('/sessions/$sessionId/close', {});
       return response.statusCode == 200;
     } catch (e) {
       return false;

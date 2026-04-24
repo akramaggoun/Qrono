@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/presence_provider.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class MyAttendanceScreen extends StatefulWidget {
   const MyAttendanceScreen({super.key});
@@ -37,7 +38,7 @@ class _MyAttendanceScreenState extends State<MyAttendanceScreen> {
     return Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
-        title: const Text('My Attendance', style: TextStyle(color: Colors.white)),
+        title: Text('my_attendance'.tr(), style: const TextStyle(color: Colors.white)),
         backgroundColor: cardColor,
         iconTheme: const IconThemeData(color: tealColor),
       ),
@@ -70,25 +71,25 @@ class _MyAttendanceScreenState extends State<MyAttendanceScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    _buildStatItem('Total', '$total'),
+                    _buildStatItem('total'.tr(), '${myAttendances.length}'),
                     Container(height: 30, width: 1, color: Colors.white30),
-                    _buildStatItem('Present', '$present'),
+                    _buildStatItem('attendance_streak'.tr(), '${provider.streak}'),
                     Container(height: 30, width: 1, color: Colors.white30),
-                    _buildStatItem('Rate', '$rate%'),
+                    _buildStatItem('weekly_attendance'.tr(), '${provider.sessionsThisWeek}'),
                   ],
                 ),
               ),
               
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Sessions History',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                      'sessions_history'.tr(),
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
                     ),
-                    Icon(Icons.filter_list, color: Colors.white54),
+                    const Icon(Icons.filter_list, color: Colors.white54),
                   ],
                 ),
               ),
@@ -96,13 +97,13 @@ class _MyAttendanceScreenState extends State<MyAttendanceScreen> {
               // List
               Expanded(
                 child: myAttendances.isEmpty
-                    ? const Center(
+                    ? Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.history, color: Colors.white24, size: 60),
-                            SizedBox(height: 16),
-                            Text('Aucun historique', style: TextStyle(color: Colors.white70, fontSize: 16)),
+                            const Icon(Icons.history, color: Colors.white24, size: 60),
+                            const SizedBox(height: 16),
+                            Text('no_history'.tr(), style: const TextStyle(color: Colors.white70, fontSize: 16)),
                           ],
                         ),
                       )
@@ -132,8 +133,8 @@ class _MyAttendanceScreenState extends State<MyAttendanceScreen> {
 
   Widget _buildAttendanceCard(dynamic att, Color cardColor, Color tealColor) {
     final session = att['session'] ?? {};
-    final labName = session['room']?['name'] ?? 'Laboratory';
-    final courseName = 'Course Session'; 
+    final labName = session['room']?['name'] ?? 'laboratory_title'.tr();
+    final courseName = 'course_session'.tr();
     final time = _formatDateTime(att['checkedInAt']);
     final isQr = att['method'] == 'qr';
 

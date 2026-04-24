@@ -22,16 +22,16 @@ class StudentModel extends UserModel {
     return StudentModel(
       id: json['id'] ?? '',
       matricule: json['matricule'] ?? '',
-      fullName: json['full_name'] ?? json['name'] ?? '',
+      fullName: json['name'] ?? json['full_name'] ?? '',
       email: json['email'] ?? '',
       phone: json['phone'],
-      isActive: json['is_active'] ?? true,
-      createdAt: json['created_at'] != null 
-          ? DateTime.parse(json['created_at']) 
-          : DateTime.now(),
-      urn: json['URN'] ?? '',
-      studentCode: json['student_code'] ?? '',
-      groupId: json['group_id']?.toString(),
+      isActive: json['isActive'] ?? json['is_active'] ?? true,
+      createdAt: json['createdAt'] != null 
+          ? DateTime.parse(json['createdAt']) 
+          : (json['created_at'] != null ? DateTime.parse(json['created_at']) : DateTime.now()),
+      urn: json['urn'] ?? json['URN'] ?? json['matricule'] ?? '',
+      studentCode: json['student_code'] ?? json['studentCode'] ?? '',
+      groupId: json['groupId']?.toString() ?? json['group_id']?.toString(),
     );
   }
 

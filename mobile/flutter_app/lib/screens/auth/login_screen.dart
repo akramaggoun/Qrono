@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../student/student_dashboard.dart';
 import '../professor/professor_dashboard.dart';
 import '../admin/admin_dashboard.dart';
 import '../../core/constants/app_colors.dart';
 import '../../providers/auth_provider.dart';
+import '../../widgets/language_selector.dart';
+import '../../widgets/wireless_settings_tab.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -37,16 +40,19 @@ class _LoginScreenState extends State<LoginScreen> {
     );
 
     if (success && mounted) {
-      final role = authProvider.userRole;
+      final role = authProvider.userRole?.toLowerCase();
       if (role == 'student') {
+        print('🚀 NAVIGATING TO DASHBOARD (Student)');
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const StudentDashboard()));
       } else if (role == 'professor') {
+        print('🚀 NAVIGATING TO DASHBOARD (Professor)');
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const ProfessorDashboard()));
       } else if (role == 'admin') {
+        print('🚀 NAVIGATING TO DASHBOARD (Admin)');
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const AdminDashboard()));
       }
     } else if (mounted) {
-      _showError(authProvider.errorMessage ?? 'Identifiants incorrects. Réessayez.');
+      _showError(authProvider.errorMessage ?? context.tr('incorrect_credentials'));
     }
   }
 
@@ -72,208 +78,198 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
+    const bgColor = Color(0xFFF8FAFB);
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-      ),
-      body: SafeArea(
-        child: Form(
-          key: _formKey,
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 28.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 20),
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        backgroundColor: bgColor,
+        body: SafeArea(
+          child: Column(
+            children: [
+              // Language Selector (Top Right)
+              Padding(
+                padding: const EdgeInsets.only(right: 32.0, top: 16.0),
+                child: Align(
+                  alignment: Alignment.topRight,
+                  child: const LanguageSelectorButton(),
+                ),
+              ),
 
-                // IHM: Identité de l'app claire et mémorisable (Logo + Titre)
-                Center(
-                  child: Column(
-                    children: [
-                      Container(
-                        height: 90,
-                        width: 90,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [AppColors.primaryTeal, AppColors.primaryTeal.withOpacity(0.7)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(24),
-                          boxShadow: [
-                            BoxShadow(color: AppColors.primaryTeal.withOpacity(0.3), blurRadius: 20, offset: const Offset(0, 10)),
-                          ],
+              // Header Section (Logo & Title)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32.0),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 20),
+                    Container(
+                      height: 80, width: 80,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [AppColors.primaryTeal, Color(0xFF00695C)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
                         ),
-                        child: const Icon(Icons.qr_code_2_rounded, size: 52, color: Colors.white),
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [
+                          BoxShadow(color: AppColors.primaryTeal.withOpacity(0.3), blurRadius: 20, offset: const Offset(0, 8)),
+                        ],
                       ),
-                      const SizedBox(height: 20),
-                      const Text(
-                        'QRONO',
-                        style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900, letterSpacing: 4, color: Colors.black87),
-                      ),
-                      const Text(
-                        'Smart Attendance System',
-                        style: TextStyle(fontSize: 13, color: AppColors.grayText),
-                      ),
+                      child: const Icon(Icons.qr_code_scanner_rounded, size: 44, color: Colors.white),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'QRONO',
+                      style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, letterSpacing: 4, color: Color(0xFF1A1C1E)),
+                    ),
+                    const Text(
+                      'PRECISION ATTENDANCE',
+                      style: TextStyle(fontSize: 8, fontWeight: FontWeight.w800, color: AppColors.grayText, letterSpacing: 1.5),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 32),
+
+              // TabBar
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32.0),
+                child: Container(
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  child: TabBar(
+                    indicator: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      color: AppColors.primaryTeal,
+                      boxShadow: [
+                        BoxShadow(color: AppColors.primaryTeal.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4)),
+                      ],
+                    ),
+                    labelColor: Colors.white,
+                    unselectedLabelColor: AppColors.grayText,
+                    labelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13, letterSpacing: 0.5),
+                    indicatorSize: TabBarIndicatorSize.tab,
+                    dividerColor: Colors.transparent,
+                    tabs: [
+                      Tab(text: 'sign_in'.tr().toUpperCase()),
+                      Tab(text: 'connection'.tr().toUpperCase()),
                     ],
                   ),
                 ),
-                const SizedBox(height: 50),
+              ),
 
-                // IHM : Titre de section clair (où suis-je ?)
-                const Text('Welcome Back 👋', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black87)),
-                const SizedBox(height: 6),
-                const Text('Login to your account', style: TextStyle(fontSize: 13, color: AppColors.grayText)),
-                const SizedBox(height: 25),
-
-                // IHM: Label visible + placeholder explicite + validation inline
-                TextFormField(
-                  controller: _matriculeController,
-                  keyboardType: TextInputType.number,
-                  style: const TextStyle(color: Colors.black87, fontSize: 16),
-                  decoration: InputDecoration(
-                    labelText: 'URN or Email',
-                    hintText: 'Ex: 202312345 or user@univ.dz',
-                    prefixIcon: Container(
-                      margin: const EdgeInsets.all(10),
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(color: AppColors.primaryTeal.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
-                      child: const Icon(Icons.badge_outlined, color: AppColors.primaryTeal, size: 20),
-                    ),
-                  ),
-                  validator: (val) {
-                    if (val == null || val.isEmpty) return 'Le matricule est requis';
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 18),
-
-                TextFormField(
-                  controller: _passwordController,
-                  obscureText: !_isPasswordVisible,
-                  style: const TextStyle(color: Colors.black87, fontSize: 16),
-                  decoration: InputDecoration(
-                    labelText: 'Password',
-                    prefixIcon: Container(
-                      margin: const EdgeInsets.all(10),
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(color: AppColors.primaryTeal.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
-                      child: const Icon(Icons.lock_outline, color: AppColors.primaryTeal, size: 20),
-                    ),
-                    // IHM: affordance claire pour voir/cacher le mot de passe
-                    suffixIcon: IconButton(
-                      icon: Icon(_isPasswordVisible ? Icons.visibility : Icons.visibility_off, color: AppColors.grayText, size: 20),
-                      tooltip: _isPasswordVisible ? 'Masquer' : 'Afficher',
-                      onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
-                    ),
-                  ),
-                  validator: (val) {
-                    if (val == null || val.isEmpty) return 'Le mot de passe est requis';
-                    if (val.length < 4) return 'Minimum 4 caractères';
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 36),
-
-                // IHM: Bouton principal (CTA) grand, contrasté, feedback visuel de chargement
-                SizedBox(
-                  width: double.infinity,
-                  height: 56,
-                  child: ElevatedButton(
-                    onPressed: authProvider.isLoading ? null : _handleLogin,
-                    style: ElevatedButton.styleFrom(
-                      elevation: 4,
-                      shadowColor: AppColors.primaryTeal.withOpacity(0.3),
-                    ),
-                    child: authProvider.isLoading
-                        ? const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
-                              SizedBox(width: 12),
-                              Text('Connexion en cours...', style: TextStyle(fontSize: 15)),
-                            ],
-                          )
-                        : const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.login, size: 20),
-                              SizedBox(width: 10),
-                              Text('LOGIN', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 1)),
-                            ],
-                          ),
-                  ),
-                ),
-                const SizedBox(height: 30),
-
-                // IHM: Séparateur visuel clair entre action réelle et démo
-                Row(
+              // TabBarView content
+              Expanded(
+                child: TabBarView(
                   children: [
-                    const Expanded(child: Divider()),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      child: Text('MODE DÉMO', style: TextStyle(color: Colors.grey.shade500, fontSize: 11, letterSpacing: 1)),
+                    // Login Tab
+                    SingleChildScrollView(
+                      padding: const EdgeInsets.all(32.0),
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('login_to_continue'.tr(), style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Color(0xFF1A1C1E))),
+                            const SizedBox(height: 6),
+                            Text('enter_credentials'.tr(), style: const TextStyle(fontSize: 13, color: AppColors.grayText, fontWeight: FontWeight.w500)),
+                            const SizedBox(height: 32),
+                            _buildTextField(
+                              controller: _matriculeController,
+                              labelKey: 'urn_email',
+                              hint: '202312345',
+                              icon: Icons.badge_rounded,
+                              validator: (val) => (val == null || val.isEmpty) ? 'required_field'.tr() : null,
+                            ),
+                            const SizedBox(height: 20),
+                            _buildTextField(
+                              controller: _passwordController,
+                              labelKey: 'password',
+                              hint: '••••••••',
+                              icon: Icons.lock_rounded,
+                              isPassword: true,
+                              validator: (val) => (val == null || val.isEmpty) ? 'required_field'.tr() : null,
+                            ),
+                            const SizedBox(height: 40),
+                            SizedBox(
+                              width: double.infinity,
+                              height: 58,
+                              child: ElevatedButton(
+                                onPressed: authProvider.isLoading ? null : _handleLogin,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primaryTeal,
+                                  foregroundColor: Colors.white,
+                                  elevation: 8,
+                                  shadowColor: AppColors.primaryTeal.withOpacity(0.4),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                                ),
+                                child: authProvider.isLoading
+                                    ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(strokeWidth: 3, color: Colors.white))
+                                    : Text('sign_in'.tr(), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, letterSpacing: 1.5)),
+                              ),
+                            ),
+                            const SizedBox(height: 40),
+                            Center(
+                              child: Text('version'.tr(),
+                                style: TextStyle(fontSize: 10, color: Colors.grey.shade400, fontWeight: FontWeight.w600, letterSpacing: 0.5)),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
-                    const Expanded(child: Divider()),
+
+                    // Connection Tab
+                    const SingleChildScrollView(
+                      padding: EdgeInsets.all(32.0),
+                      child: WirelessSettingsTab(),
+                    ),
                   ],
                 ),
-                const SizedBox(height: 14),
-
-                // IHM: badges rôle clairs avec icônes + couleur distinctive par rôle
-                Row(
-                  children: [
-                    _buildDemoButton('Student', Icons.person, AppColors.primaryTeal, () {
-                      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const StudentDashboard()));
-                    }),
-                    const SizedBox(width: 10),
-                    _buildDemoButton('Professor', Icons.school, Colors.blueAccent, () {
-                      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const ProfessorDashboard()));
-                    }),
-                    const SizedBox(width: 10),
-                    _buildDemoButton('Admin', Icons.admin_panel_settings, Colors.purple, () {
-                      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const AdminDashboard()));
-                    }),
-                  ],
-                ),
-                const SizedBox(height: 40),
-
-                // IHM: Pied de page discret (non perturbateur)
-                Center(
-                  child: Text('© 2024 Université de Khenchela', style: TextStyle(fontSize: 11, color: Colors.grey.shade400)),
-                ),
-                const SizedBox(height: 20),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
     );
   }
 
-  // IHM: Bouton de démo compact, icône + label + couleur = rôle immédiatement identifiable
-  Widget _buildDemoButton(String role, IconData icon, Color color, VoidCallback onTap) {
-    return Expanded(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.07),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: color.withOpacity(0.3)),
-          ),
-          child: Column(
-            children: [
-              Icon(icon, color: color, size: 22),
-              const SizedBox(height: 5),
-              Text(role, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: color)),
-            ],
-          ),
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String labelKey,
+    required String hint,
+    required IconData icon,
+    bool isPassword = false,
+    String? Function(String?)? validator,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))
+        ],
+      ),
+      child: TextFormField(
+        controller: controller,
+        obscureText: isPassword && !_isPasswordVisible,
+        style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF1A1C1E)),
+        decoration: InputDecoration(
+          labelText: labelKey.tr(),
+          hintText: hint,
+          prefixIcon: Icon(icon, color: AppColors.primaryTeal, size: 20),
+          suffixIcon: isPassword ? IconButton(
+            icon: Icon(_isPasswordVisible ? Icons.visibility_rounded : Icons.visibility_off_rounded, color: AppColors.grayText, size: 20),
+            onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
+          ) : null,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: BorderSide.none),
+          filled: true,
+          fillColor: Colors.transparent,
+          contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
         ),
+        validator: validator,
       ),
     );
   }

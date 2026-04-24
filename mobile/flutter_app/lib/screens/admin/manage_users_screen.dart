@@ -8,6 +8,9 @@ import '../../models/admin_model.dart';
 import '../../models/group_model.dart';
 import '../../providers/admin_provider.dart';
 import 'package:provider/provider.dart';
+import '../../core/storage/token_storage.dart';
+import 'package:easy_localization/easy_localization.dart';
+import 'student_stats_admin_screen.dart';
 
 class ManageUsersScreen extends StatefulWidget {
   const ManageUsersScreen({super.key});
@@ -24,6 +27,7 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
   @override
   void initState() {
     super.initState();
+    _checkToken();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final adminProvider = Provider.of<AdminProvider>(context, listen: false);
       adminProvider.fetchUsers();
@@ -31,42 +35,52 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
     });
   }
 
+  Future<void> _checkToken() async {
+    final token = await TokenStorage.getToken();
+    print('🔑 TOKEN IN ADMIN SCREEN: $token');
+    if (token == null && mounted) {
+      print('❌ NO TOKEN — Redirecting to login');
+      // Navigator.pushReplacementNamed(context, '/login') per instructions
+      Navigator.of(context).pushReplacementNamed('/login');
+    }
+  }
+
   List<UserModel> _getFilteredUsers(List<UserModel> users) {
     return users.where((u) {
       bool matchSearch = u.fullName.toLowerCase().contains(_query.toLowerCase());
-      if (u is StudentModel) {
-        matchSearch = matchSearch || (u as StudentModel).urn.contains(_query);
+      if (u.role == 'student') {
+        matchSearch = matchSearch || u.matricule.contains(_query);
       }
       
       final matchRole = _filterRole == 'All' ||
-          (_filterRole == 'Student'   && u is StudentModel) ||
-          (_filterRole == 'Professor' && u is ProfessorModel) ||
-          (_filterRole == 'Admin'     && u is AdminModel);
+          (_filterRole == 'Student'   && u.role == 'student') ||
+          (_filterRole == 'Professor' && u.role == 'professor') ||
+          (_filterRole == 'Admin'     && u.role == 'admin');
       return matchSearch && matchRole;
     }).toList();
   }
 
   // ── couleur/icône par rôle ────────────────────────────────
   Color _roleColor(UserModel u) {
-    if (u is ProfessorModel) return Colors.blue;
-    if (u is AdminModel)     return Colors.purple;
+    if (u.role == 'professor') return Colors.blue;
+    if (u.role == 'admin')     return Colors.purple;
     return AppColors.primaryTeal;
   }
   IconData _roleIcon(UserModel u) {
-    if (u is ProfessorModel) return Icons.school;
-    if (u is AdminModel)     return Icons.admin_panel_settings;
+    if (u.role == 'professor') return Icons.school;
+    if (u.role == 'admin')     return Icons.admin_panel_settings;
     return Icons.person;
   }
   String _roleName(UserModel u) {
-    if (u is ProfessorModel) return 'Professor';
-    if (u is AdminModel)     return 'Admin';
+    if (u.role == 'professor') return 'Professor';
+    if (u.role == 'admin')     return 'Admin';
     return 'Student';
   }
 
   String _roleSubtitle(UserModel u) {
-    if (u is ProfessorModel) return u.department;
-    if (u is AdminModel)     return u.email;
-    return 'URN: ${(u as StudentModel).urn}';
+    if (u.role == 'professor') return u.email;
+    if (u.role == 'admin')     return u.email;
+    return 'URN: ${u.matricule}';
   }
 
   // ── Dialog ajout/édition ──────────────────────────────────
@@ -75,15 +89,20 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
     final isEditing = user != null;
     String selectedRole  = user?.role ?? 'student';
     bool isActive        = user?.isActive ?? true;
-    String? selectedGroupId = (user is StudentModel) ? user.groupId : (adminProvider.groups.isNotEmpty ? adminProvider.groups[0].id : null);
+    String? selectedGroupId;
+    
+    // Safety check for group ID if it's a student
+    if (selectedRole == 'student' && user != null) {
+       // We can try to get the groupId from the json if we don't want to cast
+       // But since we want to be safe, let's just use the adminProvider groups as fallback
+       selectedGroupId = (adminProvider.groups.isNotEmpty ? adminProvider.groups[0].id : null);
+    }
 
     final nameCtrl      = TextEditingController(text: user?.fullName ?? '');
     final emailCtrl     = TextEditingController(text: user?.email ?? '');
     final passwordCtrl  = TextEditingController();  // jamais pré-remplie pour la sécurité
-    final extra1Ctrl    = TextEditingController(
-        text: (user is StudentModel) ? user.urn : (user is ProfessorModel ? user.professorCode : ''));
-    final extra2Ctrl    = TextEditingController(
-        text: (user is StudentModel) ? user.studentCode : (user is ProfessorModel ? user.department : ''));
+    final extra1Ctrl    = TextEditingController(text: user?.matricule ?? '');
+    final extra2Ctrl    = TextEditingController();
     bool _passwordVisible = false;
     final formKey = GlobalKey<FormState>();
 
@@ -108,7 +127,7 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: _roleColor(user ?? StudentModel(id: '', matricule: '', fullName: '', email: '', isActive: true, createdAt: DateTime.now(), urn: '', studentCode: '')).withOpacity(0.1),
+                        color: _roleColor(user ?? UserModel(id: '', matricule: '', fullName: '', email: '', isActive: true, createdAt: DateTime.now(), role: 'student')).withOpacity(0.1),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Icon(Icons.manage_accounts_outlined, color: AppColors.primaryTeal),
@@ -116,8 +135,8 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
                     const SizedBox(width: 12),
                     Text(
                       isEditing 
-                         ? 'Edit User Details'
-                         : 'Add New User',
+                         ? 'edit_user_details'.tr()
+                         : 'add_new_user'.tr(),
                       style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)
                     ),
                   ]),
@@ -126,23 +145,23 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
                   // IHM : sélection du rôle en premier = oriente le reste du formulaire
                   DropdownButtonFormField<String>(
                     value: selectedRole,
-                    decoration: const InputDecoration(labelText: 'Role *', prefixIcon: Icon(Icons.manage_accounts_outlined)),
-                    items: const [
-                      DropdownMenuItem(value: 'student',   child: Text('Student')),
-                      DropdownMenuItem(value: 'professor', child: Text('Professor')),
-                      DropdownMenuItem(value: 'admin',     child: Text('Administrator')),
+                    decoration: InputDecoration(labelText: 'role_required'.tr(), prefixIcon: const Icon(Icons.manage_accounts_outlined)),
+                    items: [
+                      DropdownMenuItem(value: 'student',   child: Text('filter_student'.tr())),
+                      DropdownMenuItem(value: 'professor', child: Text('filter_professor'.tr())),
+                      DropdownMenuItem(value: 'admin',     child: Text('filter_admin'.tr())),
                     ],
                     onChanged: (v) => setSheet(() => selectedRole = v!),
                   ),
                   const SizedBox(height: 12),
                   TextFormField(
                     controller: nameCtrl,
-                    decoration: const InputDecoration(
-                        labelText: 'Full Name *', 
+                    decoration: InputDecoration(
+                        labelText: 'full_name_required'.tr(), 
                         hintText: 'Ahmed Benali', 
-                        prefixIcon: Icon(Icons.person_outline)
+                        prefixIcon: const Icon(Icons.person_outline)
                     ),
-                    validator: (v) => (v == null || v.isEmpty) ? 'Required field' : null,
+                    validator: (v) => (v == null || v.isEmpty) ? 'required_field'.tr() : null,
                   ),
                   const SizedBox(height: 12),
 
@@ -150,8 +169,8 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
                   if (selectedRole == 'student') ...[
                     TextFormField(
                       controller: extra1Ctrl,
-                      decoration: const InputDecoration(labelText: 'رقم التسجيل (URN):', hintText: 'Ex: 202312345', prefixIcon: Icon(Icons.badge_outlined)),
-                      validator: (v) => (v == null || v.isEmpty) ? 'Requis' : null,
+                      decoration: InputDecoration(labelText: 'urn_label'.tr(), hintText: 'Ex: 202312345', prefixIcon: const Icon(Icons.badge_outlined)),
+                      validator: (v) => (v == null || v.isEmpty) ? 'required_field'.tr() : null,
                     ),
                     const SizedBox(height: 12),
                   ],
@@ -159,11 +178,11 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
                   TextFormField(
                     controller: emailCtrl,
                     keyboardType: TextInputType.emailAddress,
-                    decoration: const InputDecoration(
-                        labelText: 'Email *', 
+                    decoration: InputDecoration(
+                        labelText: 'email_required'.tr(), 
                         hintText: 'user@univ-khenchela.dz',
-                        prefixIcon: Icon(Icons.email_outlined)),
-                    validator: (v) => (v == null || v.isEmpty) ? 'Required' : null,
+                        prefixIcon: const Icon(Icons.email_outlined)),
+                    validator: (v) => (v == null || v.isEmpty) ? 'required_field'.tr() : null,
                   ),
                   const SizedBox(height: 12),
 
@@ -173,8 +192,8 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
                       controller: passwordCtrl,
                       obscureText: !_passwordVisible,
                       decoration: InputDecoration(
-                        labelText: isEditing ? 'New Password (optional)' : 'Temporary Password *',
-                        hintText: isEditing ? 'Leave empty to keep current' : 'Min. 6 characters',
+                        labelText: isEditing ? 'new_password_optional'.tr() : 'temp_password_required'.tr(),
+                        hintText: isEditing ? 'leave_empty_keep_current'.tr() : 'min_6_chars'.tr(),
                         prefixIcon: const Icon(Icons.lock_outline),
                         suffixIcon: IconButton(
                           icon: Icon(_passwordVisible ? Icons.visibility : Icons.visibility_off,
@@ -183,8 +202,8 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
                         ),
                       ),
                       validator: (v) {
-                        if (!isEditing && (v == null || v.isEmpty)) return 'Password required';
-                        if (v != null && v.isNotEmpty && v.length < 6) return 'Minimum 6 characters';
+                        if (!isEditing && (v == null || v.isEmpty)) return 'password_required'.tr();
+                        if (v != null && v.isNotEmpty && v.length < 6) return 'min_6_chars_error'.tr();
                         return null;
                       },
                     ),
@@ -194,7 +213,7 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
                   if (selectedRole == 'student' && adminProvider.groups.isNotEmpty) ...[
                     DropdownButtonFormField<String>(
                       value: selectedGroupId,
-                      decoration: const InputDecoration(labelText: 'Group:', prefixIcon: Icon(Icons.groups_outlined)),
+                      decoration: InputDecoration(labelText: 'group_label'.tr(), prefixIcon: const Icon(Icons.groups_outlined)),
                       items: adminProvider.groups.map((g) => DropdownMenuItem(value: g.id, child: Text(g.name))).toList(),
                       onChanged: (v) => setSheet(() => selectedGroupId = v),
                     ),
@@ -204,13 +223,13 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
                   if (selectedRole == 'professor') ...[
                     TextFormField(
                       controller: extra1Ctrl,
-                      decoration: const InputDecoration(labelText: 'Professor Code *', prefixIcon: Icon(Icons.fingerprint)),
-                      validator: (v) => (v == null || v.isEmpty) ? 'Required' : null,
+                      decoration: InputDecoration(labelText: 'professor_code_required'.tr(), prefixIcon: const Icon(Icons.fingerprint)),
+                      validator: (v) => (v == null || v.isEmpty) ? 'required_field'.tr() : null,
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
                       controller: extra2Ctrl,
-                      decoration: const InputDecoration(labelText: 'Department', hintText: 'Computer Science, IT...', prefixIcon: Icon(Icons.workspaces_outlined)),
+                      decoration: InputDecoration(labelText: 'department_label'.tr(), hintText: 'Computer Science, IT...', prefixIcon: const Icon(Icons.workspaces_outlined)),
                     ),
                     const SizedBox(height: 12),
                   ],
@@ -219,41 +238,43 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
                     value: isActive,
                     onChanged: (v) => setSheet(() => isActive = v),
                     activeColor: AppColors.primaryTeal,
-                    title: const Text('Account Active', style: TextStyle(fontWeight: FontWeight.w600)),
-                    subtitle: Text(isActive ? 'User can log in' : 'Access disabled',
+                    title: Text('account_active'.tr(), style: const TextStyle(fontWeight: FontWeight.w600)),
+                    subtitle: Text(isActive ? 'user_can_login'.tr() : 'access_disabled'.tr(),
                         style: TextStyle(fontSize: 11, color: isActive ? Colors.green : Colors.redAccent)),
                     contentPadding: EdgeInsets.zero,
                   ),
                   const SizedBox(height: 20),
 
                   Row(children: [
-                    Expanded(child: OutlinedButton(onPressed: () => Navigator.pop(ctx), child: const Text('Annuler'))),
+                    Expanded(child: OutlinedButton(onPressed: () => Navigator.pop(ctx), child: Text('cancel'.tr()))),
                     const SizedBox(width: 12),
                     Expanded(
                       child: ElevatedButton.icon(
                         icon: Icon(isEditing ? Icons.save_outlined : Icons.person_add_alt, size: 18),
-                        label: Text(isEditing 
-                          ? 'Update' 
-                          : 'Create'),
+                        label: Text(isEditing ? 'update_btn'.tr() : 'create_btn'.tr()),
                         onPressed: () async {
-                          if (!formKey.currentState!.validate()) return;
+                          print('🔴 BUTTON PRESSED: Add/Edit User');
+                          final isValid = formKey.currentState!.validate();
+                          print('🟡 FORM VALID: $isValid');
+                          if (!isValid) return;
                           
                           final userData = {
-                            'full_name': nameCtrl.text,
+                            'name': nameCtrl.text,
                             'role': selectedRole,
-                            'is_active': isActive,
+                            'isActive': isActive,
                             if (passwordCtrl.text.isNotEmpty) 'password': passwordCtrl.text,
                             'email': emailCtrl.text,
                             if (selectedRole == 'student') ...{
                               'urn': extra1Ctrl.text,
-                              'group_id': selectedGroupId,
+                              'groupId': selectedGroupId,
                             },
                             if (selectedRole == 'professor') ...{
-                              'professor_code': extra1Ctrl.text,
+                              'professorCode': extra1Ctrl.text,
                               'department': extra2Ctrl.text,
                             },
                           };
 
+                          print('🟠 CALLING adminProvider.addUser/updateUser()');
                           bool success;
                           if (isEditing) {
                             success = await adminProvider.updateUser(user.id, userData);
@@ -261,23 +282,28 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
                             success = await adminProvider.addUser(userData);
                           }
 
-                          if (success && mounted) {
+                          if (!mounted) return;
+
+                          if (success) {
                             Navigator.pop(ctx);
                             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                               content: Row(children: [
                                 const Icon(Icons.check_circle_outline, color: Colors.white, size: 18),
                                 const SizedBox(width: 8),
-                                Text(isEditing ? 'User updated successfully' : 'User created successfully'),
+                                Text(isEditing ? 'user_updated_success'.tr() : 'user_created_success'.tr()),
                               ]),
                               backgroundColor: Colors.green,
                               behavior: SnackBarBehavior.floating,
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                               margin: const EdgeInsets.all(16),
                             ));
-                          } else if (mounted) {
+                          } else {
                             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                              content: Text(adminProvider.errorMessage ?? "An error occurred."),
+                              content: Text(adminProvider.errorMessage ?? "error_occurred".tr()),
                               backgroundColor: Colors.redAccent,
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              margin: const EdgeInsets.all(16),
                             ));
                           }
                         },
@@ -298,14 +324,14 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(children: [
-          Icon(Icons.warning_amber_rounded, color: Colors.orange),
-          SizedBox(width: 10),
-          Text('Delete User?'),
+        title: Row(children: [
+          const Icon(Icons.warning_amber_rounded, color: Colors.orange),
+          const SizedBox(width: 10),
+          Text('delete_user_prompt'.tr()),
         ]),
-        content: Text('"${user.fullName}" will be deleted (or deactivated if linked to existing data).'),
+        content: Text('delete_user_desc'.tr(args: [user.fullName])),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(context), child: Text('cancel'.tr())),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
             onPressed: () async {
@@ -313,10 +339,10 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
               if (success && mounted) {
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content: const Row(children: [
-                    Icon(Icons.delete_outline, color: Colors.white, size: 18),
-                    SizedBox(width: 8),
-                    Text('Operation successful'),
+                  content: Row(children: [
+                    const Icon(Icons.delete_outline, color: Colors.white, size: 18),
+                    const SizedBox(width: 8),
+                    Text('operation_successful'.tr()),
                   ]),
                   backgroundColor: Colors.redAccent,
                   behavior: SnackBarBehavior.floating,
@@ -325,7 +351,7 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
                 ));
               }
             },
-            child: const Text('Supprimer', style: TextStyle(color: Colors.white)),
+            child: Text('delete'.tr(), style: const TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -340,8 +366,8 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('User Management', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
-            Text('${Provider.of<AdminProvider>(context).users.length} users', style: const TextStyle(fontSize: 11, color: AppColors.grayText)),
+            Text('user_management_title'.tr(), style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+            Text('users_count'.tr(args: [Provider.of<AdminProvider>(context).users.length.toString()]), style: const TextStyle(fontSize: 11, color: AppColors.grayText)),
           ],
         ),
       ),
@@ -349,7 +375,7 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
         onPressed: () => _showUserDialog(),
         backgroundColor: AppColors.primaryTeal,
         icon: const Icon(Icons.person_add_alt_1, color: Colors.white),
-        label: const Text('New', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        label: Text('new_btn'.tr(), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
       ),
       body: Consumer<AdminProvider>(
         builder: (context, adminProvider, child) {
@@ -370,7 +396,7 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
                       controller: _searchController,
                       onChanged: (v) => setState(() => _query = v),
                       decoration: InputDecoration(
-                        hintText: 'Name or URN...',
+                        hintText: 'search_name_urn'.tr(),
                         prefixIcon: const Icon(Icons.search, size: 20, color: AppColors.grayText),
                         suffixIcon: _query.isNotEmpty
                             ? IconButton(icon: const Icon(Icons.clear, size: 18, color: AppColors.grayText),
@@ -423,7 +449,7 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
                     ? Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
                         Icon(Icons.person_search, size: 60, color: Colors.grey.shade300),
                         const SizedBox(height: 12),
-                        const Text('No users found', style: TextStyle(color: Colors.black54, fontWeight: FontWeight.bold)),
+                        Text('no_users_found'.tr(), style: const TextStyle(color: Colors.black54, fontWeight: FontWeight.bold)),
                       ]))
                     : ListView.separated(
                         padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
@@ -443,50 +469,56 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
     final color = _roleColor(user);
     final sub   = _roleSubtitle(user);
 
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.cardColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: user.isActive ? AppColors.borderColor : Colors.redAccent.withOpacity(0.25)),
-      ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        leading: Stack(alignment: Alignment.bottomRight, children: [
-          CircleAvatar(
-            radius: 22,
-            backgroundColor: color.withOpacity(0.1),
-            child: Icon(_roleIcon(user), color: color, size: 22),
-          ),
-          // IHM : indicateur de statut en overlay — 2 infos en 1 espace
-          Container(
-            width: 11, height: 11,
-            decoration: BoxDecoration(
-              color: user.isActive ? Colors.green : Colors.redAccent,
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: 1.5),
-            ),
-          ),
-        ]),
-        title: Text(user.fullName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 3),
-            Row(children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
-                child: Text(_roleName(user), style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: color)),
-              ),
-              const SizedBox(width: 6),
-              Flexible(child: Text(sub, style: const TextStyle(fontSize: 11, color: AppColors.grayText), overflow: TextOverflow.ellipsis)),
-            ]),
-          ],
+    return InkWell(
+      onTap: user.role == 'student' 
+        ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => StudentStatsAdminScreen(studentId: user.id, studentName: user.fullName)))
+        : null,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.cardColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: user.isActive ? AppColors.borderColor : Colors.redAccent.withOpacity(0.25)),
         ),
-        trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-          Tooltip(message: 'Edit', child: IconButton(icon: const Icon(Icons.edit_outlined, size: 20, color: Colors.blueAccent), onPressed: () => _showUserDialog(user: user))),
-          Tooltip(message: 'Delete', child: IconButton(icon: const Icon(Icons.delete_outline, size: 20, color: Colors.redAccent), onPressed: () => _confirmDelete(user))),
-        ]),
+        child: ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          leading: Stack(alignment: Alignment.bottomRight, children: [
+            CircleAvatar(
+              radius: 22,
+              backgroundColor: color.withOpacity(0.1),
+              child: Icon(_roleIcon(user), color: color, size: 22),
+            ),
+            // IHM : indicateur de statut en overlay — 2 infos en 1 espace
+            Container(
+              width: 11, height: 11,
+              decoration: BoxDecoration(
+                color: user.isActive ? Colors.green : Colors.redAccent,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 1.5),
+              ),
+            ),
+          ]),
+          title: Text(user.fullName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 3),
+              Row(children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                  decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
+                  child: Text(_roleName(user), style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: color)),
+                ),
+                const SizedBox(width: 6),
+                Flexible(child: Text(sub, style: const TextStyle(fontSize: 11, color: AppColors.grayText), overflow: TextOverflow.ellipsis)),
+              ]),
+            ],
+          ),
+          trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+            Tooltip(message: 'edit_tooltip'.tr(), child: IconButton(icon: const Icon(Icons.edit_outlined, size: 20, color: Colors.blueAccent), onPressed: () => _showUserDialog(user: user))),
+            Tooltip(message: 'delete_tooltip'.tr(), child: IconButton(icon: const Icon(Icons.delete_outline, size: 20, color: Colors.redAccent), onPressed: () => _confirmDelete(user))),
+          ]),
+        ),
       ),
     );
   }

@@ -3,6 +3,7 @@ import '../../core/constants/app_colors.dart';
 import '../../models/group_model.dart';
 import '../../providers/admin_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class ManageGroupsScreen extends StatefulWidget {
   const ManageGroupsScreen({super.key});
@@ -69,7 +70,7 @@ class _ManageGroupsScreenState extends State<ManageGroupsScreen> {
                     child: const Icon(Icons.groups, color: Colors.purple),
                   ),
                   const SizedBox(width: 12),
-                  Text(isEditing ? 'Edit Group' : 'New Group',
+                  Text(isEditing ? 'edit_group'.tr() : 'add_new_group'.tr(),
                       style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 ],
               ),
@@ -77,30 +78,30 @@ class _ManageGroupsScreenState extends State<ManageGroupsScreen> {
               // IHM : champs avec labels persistants et hints explicatifs
               TextFormField(
                 controller: nameCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Group Name *',
+                decoration: InputDecoration(
+                  labelText: 'group_name_required'.tr(),
                   hintText: 'Ex: L3 CS S1 — Group 01',
-                  prefixIcon: Icon(Icons.label_outline),
+                  prefixIcon: const Icon(Icons.label_outline),
                 ),
-                validator: (v) => (v == null || v.isEmpty) ? 'This field is required' : null,
+                validator: (v) => (v == null || v.isEmpty) ? 'required_field'.tr() : null,
               ),
               const SizedBox(height: 14),
               TextFormField(
                 controller: yearCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Study Level *',
+                decoration: InputDecoration(
+                  labelText: 'study_level_required'.tr(),
                   hintText: 'Ex: Year 3, Master 1...',
-                  prefixIcon: Icon(Icons.school_outlined),
+                  prefixIcon: const Icon(Icons.school_outlined),
                 ),
-                validator: (v) => (v == null || v.isEmpty) ? 'This field is required' : null,
+                validator: (v) => (v == null || v.isEmpty) ? 'required_field'.tr() : null,
               ),
               const SizedBox(height: 14),
               TextFormField(
                 controller: specialtyCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Specialty',
+                decoration: InputDecoration(
+                  labelText: 'specialty'.tr(),
                   hintText: 'Ex: Computer Science, Networks...',
-                  prefixIcon: Icon(Icons.workspaces_outlined),
+                  prefixIcon: const Icon(Icons.workspaces_outlined),
                 ),
               ),
               const SizedBox(height: 24),
@@ -110,24 +111,29 @@ class _ManageGroupsScreenState extends State<ManageGroupsScreen> {
                   Expanded(
                     child: OutlinedButton(
                       onPressed: () => Navigator.pop(context),
-                      child: const Text('Cancel'),
+                      child: Text('cancel'.tr()),
                     ),
                   ),
                   const SizedBox(width: 12),
                     Expanded(
                       child: ElevatedButton.icon(
                         icon: Icon(isEditing ? Icons.save_outlined : Icons.add, size: 18),
-                        label: Text(isEditing ? 'Save' : 'Create'),
+                        label: Text(isEditing ? 'save'.tr() : 'create_btn'.tr()),
                         onPressed: () async {
-                          if (!formKey.currentState!.validate()) return;
+                          print('🔴 BUTTON PRESSED: Add/Edit Group');
+                          final isValid = formKey.currentState!.validate();
+                          print('🟡 FORM VALID: $isValid');
+                          if (!isValid) return;
+                          
                           final adminProvider = Provider.of<AdminProvider>(context, listen: false);
                           
                           final groupData = {
-                            'name': nameCtrl.text,
-                            'year_level': yearCtrl.text,
-                            'specialty': specialtyCtrl.text,
+                            'name': nameCtrl.text.trim(),
+                            'year_level': yearCtrl.text.trim(),
+                            'specialty': specialtyCtrl.text.trim(),
                           };
 
+                          print('🟠 CALLING adminProvider.addGroup/updateGroup()');
                           bool success;
                           if (isEditing) {
                             success = await adminProvider.updateGroup(group.id, groupData);
@@ -135,15 +141,25 @@ class _ManageGroupsScreenState extends State<ManageGroupsScreen> {
                             success = await adminProvider.addGroup(groupData);
                           }
 
-                          if (success && mounted) {
+                          if (!mounted) return;
+
+                          if (success) {
                             Navigator.pop(context);
                             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                               content: Row(children: [
                                 const Icon(Icons.check_circle_outline, color: Colors.white, size: 18),
                                 const SizedBox(width: 8),
-                                Text(isEditing ? 'Group updated' : 'Group created successfully'),
+                                Text(isEditing ? 'group_updated_success'.tr() : 'group_created_success'.tr()),
                               ]),
                               backgroundColor: Colors.green,
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              margin: const EdgeInsets.all(16),
+                            ));
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                              content: Text(adminProvider.errorMessage ?? 'error_occurred'.tr()),
+                              backgroundColor: Colors.redAccent,
                               behavior: SnackBarBehavior.floating,
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                               margin: const EdgeInsets.all(16),
@@ -167,14 +183,14 @@ class _ManageGroupsScreenState extends State<ManageGroupsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(children: [
-          Icon(Icons.warning_amber_rounded, color: Colors.orange),
-          SizedBox(width: 10),
-          Text('Confirm Deletion'),
+        title: Row(children: [
+          const Icon(Icons.warning_amber_rounded, color: Colors.orange),
+          const SizedBox(width: 10),
+          Text('delete_group_prompt'.tr()),
         ]),
-        content: Text('Delete "${group.name}"? This action is irreversible.'),
+        content: Text('delete_group_desc'.tr(args: [group.name])),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(context), child: Text('cancel'.tr())),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
             onPressed: () async {
@@ -182,10 +198,10 @@ class _ManageGroupsScreenState extends State<ManageGroupsScreen> {
               if (success && mounted) {
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content: const Row(children: [
-                    Icon(Icons.delete_outline, color: Colors.white, size: 18),
-                    SizedBox(width: 8),
-                    Text('Group deleted'),
+                  content: Row(children: [
+                    const Icon(Icons.delete_outline, color: Colors.white, size: 18),
+                    const SizedBox(width: 8),
+                    Text('group_deleted_success'.tr()),
                   ]),
                   backgroundColor: Colors.redAccent,
                   behavior: SnackBarBehavior.floating,
@@ -194,7 +210,7 @@ class _ManageGroupsScreenState extends State<ManageGroupsScreen> {
                 ));
               }
             },
-            child: const Text('Supprimer', style: TextStyle(color: Colors.white)),
+            child: Text('delete'.tr(), style: const TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -209,8 +225,8 @@ class _ManageGroupsScreenState extends State<ManageGroupsScreen> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Groups & Promotions', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
-            Text('${Provider.of<AdminProvider>(context).groups.length} groups registered', style: const TextStyle(fontSize: 11, color: AppColors.grayText)),
+            Text('groups_promotions_title'.tr(), style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+            Text('groups_registered'.tr(args: [Provider.of<AdminProvider>(context).groups.length.toString()]), style: const TextStyle(fontSize: 11, color: AppColors.grayText)),
           ],
         ),
       ),
@@ -218,7 +234,7 @@ class _ManageGroupsScreenState extends State<ManageGroupsScreen> {
         onPressed: () => _showGroupDialog(),
         backgroundColor: AppColors.primaryTeal,
         icon: const Icon(Icons.group_add, color: Colors.white),
-        label: const Text('New Group', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        label: Text('new_group_btn'.tr(), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
       ),
       body: Consumer<AdminProvider>(
         builder: (context, adminProvider, child) {
@@ -238,7 +254,7 @@ class _ManageGroupsScreenState extends State<ManageGroupsScreen> {
                   controller: _searchController,
                   onChanged: (v) => setState(() => _query = v),
                   decoration: InputDecoration(
-                    hintText: 'Search for a group...',
+                    hintText: 'search_group'.tr(),
                     prefixIcon: const Icon(Icons.search, size: 20, color: AppColors.grayText),
                     suffixIcon: _query.isNotEmpty
                         ? IconButton(
@@ -308,11 +324,11 @@ class _ManageGroupsScreenState extends State<ManageGroupsScreen> {
           children: [
             // IHM : icones avec Tooltip pour l'accessibilité
             Tooltip(
-              message: 'Edit',
+              message: 'edit_tooltip'.tr(),
               child: IconButton(icon: const Icon(Icons.edit_outlined, size: 20, color: Colors.blueAccent), onPressed: () => _showGroupDialog(group: group)),
             ),
             Tooltip(
-              message: 'Delete',
+              message: 'delete_tooltip'.tr(),
               child: IconButton(icon: const Icon(Icons.delete_outline, size: 20, color: Colors.redAccent), onPressed: () => _confirmDelete(group)),
             ),
           ],
@@ -328,9 +344,9 @@ class _ManageGroupsScreenState extends State<ManageGroupsScreen> {
         children: [
           Icon(Icons.search_off, size: 60, color: Colors.grey.shade300),
           const SizedBox(height: 16),
-          const Text('No groups found', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black54)),
+          Text('no_groups_found'.tr(), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black54)),
           const SizedBox(height: 6),
-          const Text('Modify your search', style: TextStyle(color: AppColors.grayText, fontSize: 13)),
+          Text('modify_search'.tr(), style: const TextStyle(color: AppColors.grayText, fontSize: 13)),
         ],
       ),
     );

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/admin_provider.dart';
 import '../../models/unauthorized_log_model.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class UnauthorizedLogsScreen extends StatefulWidget {
   const UnauthorizedLogsScreen({super.key});
@@ -41,11 +42,11 @@ class _UnauthorizedLogsScreenState extends State<UnauthorizedLogsScreen> {
       appBar: AppBar(
         backgroundColor: cardColor,
         iconTheme: const IconThemeData(color: tealColor),
-        title: const Column(
+        title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Sécurité & Alertes', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.white)),
-            Text('Logs d\'accès non autorisés', style: TextStyle(fontSize: 11, color: Colors.white70)),
+            Text('security_alerts_title_2'.tr(), style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.white)),
+            Text('unauthorized_access_logs'.tr(), style: const TextStyle(fontSize: 11, color: Colors.white70)),
           ],
         ),
       ),
@@ -89,13 +90,13 @@ class _UnauthorizedLogsScreenState extends State<UnauthorizedLogsScreen> {
       padding: const EdgeInsets.all(16),
       child: Row(
         children: [
-          _buildSeverityChip('$high', 'Critiques', alertColor),
+          _buildSeverityChip('$high', 'critical_severity'.tr(), alertColor),
           const SizedBox(width: 10),
-          _buildSeverityChip('$medium', 'Moyennes', Colors.orange),
+          _buildSeverityChip('$medium', 'medium_severity'.tr(), Colors.orange),
           const SizedBox(width: 10),
-          _buildSeverityChip('$low', 'Faibles', tealColor),
+          _buildSeverityChip('$low', 'low_severity'.tr(), tealColor),
           const Spacer(),
-          Text('Total: $total', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white70)),
+          Text('total_logs'.tr(args: [total.toString()]), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white70)),
         ],
       ),
     );
@@ -118,7 +119,7 @@ class _UnauthorizedLogsScreenState extends State<UnauthorizedLogsScreen> {
 
   Widget _buildLogCard(UnauthorizedLogModel log, Color cardColor, Color alertColor, Color tealColor) {
     final severityColor = alertColor;
-    final severityLabel = '⚠ Critique';
+    final severityLabel = '⚠ ${'critical_severity'.tr()}';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -149,7 +150,7 @@ class _UnauthorizedLogsScreenState extends State<UnauthorizedLogsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Using ID or User if present. The API will pass student info inside.
-                      Text('Log ID: ${log.id}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.white)),
+                      Text('log_id'.tr(args: [log.id]), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.white)),
                     ],
                   ),
                 ),
@@ -169,7 +170,7 @@ class _UnauthorizedLogsScreenState extends State<UnauthorizedLogsScreen> {
                   children: [
                     const Icon(Icons.science_outlined, size: 15, color: Colors.white54),
                     const SizedBox(width: 6),
-                    const Text('Laboratory', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white)),
+                    Text('laboratory_column'.tr(), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white)),
                     const Spacer(),
                     const Icon(Icons.access_time, size: 15, color: Colors.white54),
                     const SizedBox(width: 6),
@@ -198,15 +199,15 @@ class _UnauthorizedLogsScreenState extends State<UnauthorizedLogsScreen> {
   }
 
   Widget _buildEmptyState() {
-    return const Center(
+    return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.verified_user_outlined, size: 64, color: Colors.green),
-          SizedBox(height: 16),
-          Text('Aucune alerte', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white)),
-          SizedBox(height: 6),
-          Text('Le système est sécurisé', style: TextStyle(color: Colors.white70)),
+          const Icon(Icons.verified_user_outlined, size: 64, color: Colors.green),
+          const SizedBox(height: 16),
+          Text('no_alerts'.tr(), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white)),
+          const SizedBox(height: 6),
+          Text('system_secure'.tr(), style: const TextStyle(color: Colors.white70)),
         ],
       ),
     );

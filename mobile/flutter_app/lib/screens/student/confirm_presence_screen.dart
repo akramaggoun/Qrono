@@ -4,8 +4,7 @@ import '../../core/constants/app_colors.dart';
 import '../../providers/presence_provider.dart';
 
 import 'package:intl/intl.dart';
-import 'package:flutter/material.dart';
-import '../../core/constants/app_colors.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class ConfirmPresenceScreen extends StatelessWidget {
   final Map<String, dynamic> attendanceData;
@@ -18,12 +17,14 @@ class ConfirmPresenceScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final session = attendanceData['session'] ?? {};
-    final checkInAt = DateTime.parse(attendanceData['check_in_at']);
+    final checkInAt = attendanceData['checkInAt'] != null 
+        ? DateTime.parse(attendanceData['checkInAt']) 
+        : DateTime.now();
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Succès du Scan'),
+        title: Text('scan_success'.tr()),
         automaticallyImplyLeading: false,
       ),
       body: Padding(
@@ -34,8 +35,8 @@ class ConfirmPresenceScreen extends StatelessWidget {
             const SizedBox(height: 20),
             const Icon(Icons.check_circle, color: AppColors.primaryTeal, size: 100),
             const SizedBox(height: 20),
-            const Text(
-              'Présence Enregistrée ! ✅',
+            Text(
+              'presence_saved'.tr(),
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 22,
@@ -44,8 +45,8 @@ class ConfirmPresenceScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 10),
-            const Text(
-              'Votre présence a été validée pour la session actuelle.',
+            Text(
+              'presence_validated'.tr(),
               textAlign: TextAlign.center,
               style: TextStyle(color: AppColors.grayText),
             ),
@@ -64,13 +65,13 @@ class ConfirmPresenceScreen extends StatelessWidget {
               ),
               child: Column(
                 children: [
-                  _buildDetailRow(Icons.book_outlined, 'Matière', session['course_name'] ?? 'Inconnu'),
+                  _buildDetailRow(Icons.book_outlined, 'subject'.tr(), session['courseName'] ?? 'unknown'.tr()),
                   const Divider(height: 30),
-                  _buildDetailRow(Icons.science_outlined, 'Laboratoire', session['laboratory'] ?? 'Non spécifié'),
+                  _buildDetailRow(Icons.science_outlined, 'laboratory'.tr(), session['laboratory'] ?? 'not_specified'.tr()),
                   const Divider(height: 30),
-                  _buildDetailRow(Icons.groups_outlined, 'Groupe', session['group'] ?? 'Tout le groupe'),
+                  _buildDetailRow(Icons.groups_outlined, 'group'.tr(), session['group'] ?? 'entire_group'.tr()),
                   const Divider(height: 30),
-                  _buildDetailRow(Icons.access_time, 'Heure d\'entrée', DateFormat('HH:mm:ss').format(checkInAt)),
+                  _buildDetailRow(Icons.access_time, 'entry_time'.tr(), DateFormat('HH:mm:ss').format(checkInAt)),
                 ],
               ),
             ),
@@ -84,8 +85,8 @@ class ConfirmPresenceScreen extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 18),
                 backgroundColor: AppColors.primaryTeal,
               ),
-              child: const Text(
-                'RETOUR AU TABLEAU DE BORD',
+              child: Text(
+                'back_to_dashboard'.tr(),
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
             ),

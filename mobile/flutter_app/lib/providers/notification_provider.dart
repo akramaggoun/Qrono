@@ -2,10 +2,17 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import '../core/network/api_client.dart';
 import '../models/notification_model.dart';
+import '../core/config/api_config.dart';
+import 'package:socket_io_client/socket_io_client.dart' as io;
+import 'package:audioplayers/audioplayers.dart';
+import 'package:overlay_support/overlay_support.dart';
+import 'package:flutter/material.dart';
 
 class NotificationProvider extends ChangeNotifier {
   final _apiClient = ApiClient();
-  
+  io.Socket? _socket;
+  final _audioPlayer = AudioPlayer();
+
   List<NotificationModel> _notifications = [];
   bool _isLoading = false;
   int _unreadCount = 0;
@@ -13,6 +20,110 @@ class NotificationProvider extends ChangeNotifier {
   List<NotificationModel> get notifications => _notifications;
   bool get isLoading => _isLoading;
   int get unreadCount => _unreadCount;
+
+  // ═══════════════════════════════
+  //  REAL-TIME SOCKET INIT (Phase 2)
+  // ═══════════════════════════════
+
+  void initSocket(String userId) {
+    if (_socket != null) return;
+
+    final socketUrl = ApiConfig.socketBaseUrl;
+
+    print('📡 Connecting to Notification Socket for user: $userId');
+    print('🌐 Socket URL: $socketUrl (${ApiConfig.connectionType})');
+
+    _socket = io.io(socketUrl, io.OptionBuilder()
+      .setTransports(['websocket'])
+      .setQuery({'userId': userId})
+      .enableAutoConnect()
+      .build());
+
+    _socket!.onConnect((_) {
+      print('✅ Connected to Notification Server (${ApiConfig.connectionType})');
+    });
+
+    _socket!.on('notification:new', (data) {
+      try {
+        final notification = NotificationModel.fromJson(data);
+        _showPopup(notification);
+        _playSound(notification.type);
+      } catch (e) {
+        print('⚠️ Error parsing real-time notification: $e');
+      }
+      fetchNotifications();
+    });
+
+    _socket!.onDisconnect((_) => print('❌ Disconnected from Notification Server'));
+  }
+
+  void _playSound(String type) async {
+    String soundFile;
+    switch (type.toLowerCase()) {
+      case 'warning':
+      case 'error':
+      case 'critical':
+        soundFile = 'sounds/warning.mp3';
+        break;
+      case 'success':
+        soundFile = 'sounds/success.mp3';
+        break;
+      case 'info':
+      default:
+        soundFile = 'sounds/info.mp3';
+    }
+
+    try {
+      await _audioPlayer.play(AssetSource(soundFile));
+    } catch (e) {
+      print('⚠️ Could not play notification sound: $e');
+    }
+  }
+
+  void _showPopup(NotificationModel notification) {
+    Color bgColor;
+    IconData icon;
+
+    switch (notification.type.toLowerCase()) {
+      case 'warning':
+      case 'critical':
+        bgColor = Colors.orange.shade800;
+        icon = Icons.warning_amber_rounded;
+        break;
+      case 'error':
+        bgColor = Colors.red.shade800;
+        icon = Icons.error_outline_rounded;
+        break;
+      case 'success':
+        bgColor = Colors.green.shade800;
+        icon = Icons.check_circle_outline_rounded;
+        break;
+      default:
+        bgColor = Colors.blue.shade800;
+        icon = Icons.notifications_active_rounded;
+    }
+
+    showSimpleNotification(
+      Text(
+        notification.title,
+        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+      ),
+      subtitle: Text(
+        notification.body,
+        style: const TextStyle(color: Colors.white70),
+      ),
+      leading: Icon(icon, color: Colors.white, size: 30),
+      background: bgColor,
+      duration: const Duration(seconds: 4),
+      elevation: 4,
+      slideDismissDirection: DismissDirection.horizontal,
+    );
+  }
+
+  void disconnectSocket() {
+    _socket?.disconnect();
+    _socket = null;
+  }
 
   // ═══════════════════════════════
   //  SCENARIO 5 — READ NOTIFICATIONS (UML)
@@ -23,7 +134,7 @@ class NotificationProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await _apiClient.get('/api/notifications');
+      final response = await _apiClient.get('/notifications');
       if (response.statusCode == 200) {
         final List data = jsonDecode(response.body)['notifications'];
         _notifications = data.map((n) => NotificationModel.fromJson(n)).toList();
@@ -39,7 +150,7 @@ class NotificationProvider extends ChangeNotifier {
 
   Future<bool> markAsRead(String id) async {
     try {
-      final response = await _apiClient.patch('/api/notifications/$id/read', {});
+      final response = await _apiClient.patch('/notifications/$id/read', {});
       if (response.statusCode == 200) {
         final index = _notifications.indexWhere((n) => n.id == id);
         if (index != -1) {
@@ -67,7 +178,7 @@ class NotificationProvider extends ChangeNotifier {
 
   Future<bool> markAllAsRead() async {
     try {
-      final response = await _apiClient.patch('/api/notifications/read-all', {});
+      final response = await _apiClient.patch('/notifications/read-all', {});
       if (response.statusCode == 200) {
         _notifications = _notifications.map((n) => NotificationModel(
           id: n.id,

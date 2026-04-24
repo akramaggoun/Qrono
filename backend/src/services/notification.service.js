@@ -41,14 +41,16 @@ exports.createAndSendNotification = async (userId, { title, body, type, data }) 
   const isOnline = userRoom && userRoom.size > 0;
 
   if (isOnline) {
+    console.log(`[NOTIFICATION] Sending to ${userId} via Socket.io (Online)`);
     io.to(userId).emit('notification:new', notification);
   } else if (isFirebaseInitialized) {
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { fcmToken: true }
     });
-
+    
     if (user?.fcmToken) {
+      console.log(`[NOTIFICATION] Sending to ${userId} via FCM (Token: ${user.fcmToken.substring(0, 10)}...)`);
       const message = {
         notification: { title, body },
         data: { ...data, type },
@@ -58,27 +60,15 @@ exports.createAndSendNotification = async (userId, { title, body, type, data }) 
       admin.messaging().send(message)
         .then(response => console.log('FCM Success:', response))
         .catch(error => console.error('FCM Error:', error));
+    } else {
+      console.log(`[NOTIFICATION] User ${userId} is offline and has no FCM token.`);
     }
+  } else {
+    console.log(`[NOTIFICATION] User ${userId} is offline and Firebase is NOT initialized.`);
   }
 
   return notification;
 };
 
-exports.createAndSendNotification = async (userId, { title, body, type, data }) => {
-  const notification = await prisma.notification.create({
-    data: {
-      userId,
-      title,
-      body,
-      type,
-      data,
-    }
-  });
 
-  if (io) {
-    io.to(userId).emit('notification:new', notification);
-  }
-
-  return notification;
-};
 

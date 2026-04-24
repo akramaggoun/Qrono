@@ -1,4 +1,4 @@
-const { verifyToken } = require('../utils/jwt');
+const { verifyUserToken } = require('../utils/jwt');
 
 const prisma = require('../utils/prisma');
 
@@ -14,7 +14,7 @@ const authMiddleware = async (req, res, next) => {
 
     let decoded;
     try {
-      decoded = verifyToken(token);
+      decoded = verifyUserToken(token);
     } catch (err) {
       return res.status(401).json({ message: 'Invalid or expired token' });
     }

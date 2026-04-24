@@ -7,6 +7,7 @@ class UserModel {
   final String role;       // admin, professor, student
   final bool isActive;
   final DateTime createdAt;
+  final String? department;
 
   UserModel({
     required this.id,
@@ -17,20 +18,22 @@ class UserModel {
     required this.isActive,
     required this.createdAt,
     required this.role,
+    this.department,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
       id: json['id'] ?? '',
       matricule: json['matricule'] ?? '',
-      fullName: json['full_name'] ?? json['name'] ?? '',
+      fullName: json['name'] ?? json['full_name'] ?? '',
       email: json['email'] ?? '',
       phone: json['phone'],
-      isActive: json['is_active'] ?? true,
-      createdAt: json['created_at'] != null 
-          ? DateTime.parse(json['created_at']) 
-          : DateTime.now(),
-      role: json['role'] ?? 'student',
+      isActive: json['isActive'] ?? json['is_active'] ?? true,
+      createdAt: json['createdAt'] != null 
+          ? DateTime.parse(json['createdAt']) 
+          : (json['created_at'] != null ? DateTime.parse(json['created_at']) : DateTime.now()),
+      role: json['role']?.toString().toLowerCase() ?? 'student',
+      department: json['department'],
     );
   }
 
@@ -38,12 +41,13 @@ class UserModel {
     return {
       'id': id,
       'matricule': matricule,
-      'full_name': fullName,
+      'name': fullName,
       'email': email,
       'phone': phone,
-      'is_active': isActive,
-      'created_at': createdAt.toIso8601String(),
+      'isActive': isActive,
+      'createdAt': createdAt.toIso8601String(),
       'role': role,
+      'department': department,
     };
   }
 }

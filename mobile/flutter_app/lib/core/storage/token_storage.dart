@@ -5,37 +5,42 @@ class TokenStorage {
   static const String _keyRole = 'user_role';
   static const String _keyName = 'user_name';
 
-  Future<void> saveToken(String token) async {
+  static Future<void> saveToken(String token) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_keyToken, token);
+    print('💾 TOKEN SAVED: $token');
   }
 
-  Future<String?> getToken() async {
+  static Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_keyToken);
+    final token = prefs.getString(_keyToken);
+    print('🔑 TOKEN RETRIEVED: $token');
+    if (token == null) print('❌ TOKEN IS NULL!');
+    return token;
   }
 
-  Future<void> saveRole(String role) async {
+  static Future<void> saveRole(String role) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_keyRole, role);
+    print('✅ Role saved: $role');
   }
 
-  Future<String?> getRole() async {
+  static Future<String?> getRole() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_keyRole);
   }
 
-  Future<void> saveName(String name) async {
+  static Future<void> saveName(String name) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_keyName, name);
   }
 
-  Future<String?> getName() async {
+  static Future<String?> getName() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_keyName);
   }
 
-  Future<void> clearAuthData() async {
+  static Future<void> clearAuthData() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_keyToken);
     await prefs.remove(_keyRole);
