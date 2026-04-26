@@ -254,12 +254,13 @@ class _ProfessorDashboardState extends State<ProfessorDashboard> {
       );
     }
 
+    final limitedSessions = sessions.take(5).toList();
     return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      itemCount: sessions.take(5).length,
+      itemCount: limitedSessions.length,
       itemBuilder: (context, index) {
-        final session = sessions[index];
+        final session = limitedSessions[index];
         bool isActive = session.status == 'ACTIVE';
         
         return Container(

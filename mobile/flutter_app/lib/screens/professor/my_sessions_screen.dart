@@ -69,9 +69,13 @@ class _MySessionsScreenState extends State<MySessionsScreen> {
 
           return ListView.builder(
             padding: const EdgeInsets.all(16),
-            itemCount: sessions.length,
+            itemCount: provider.sessions.length,
             itemBuilder: (context, index) {
-              return _buildSessionCard(sessions[index], cardColor, tealColor, context);
+              if (index >= provider.sessions.length) {
+                debugPrint('⚠️ Index $index out of bounds for sessions length ${provider.sessions.length}');
+                return const SizedBox.shrink();
+              }
+              return _buildSessionCard(provider.sessions[index], cardColor, tealColor, context);
             },
           );
         },

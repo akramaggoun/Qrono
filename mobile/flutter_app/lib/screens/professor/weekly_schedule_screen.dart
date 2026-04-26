@@ -49,16 +49,20 @@ class _WeeklyScheduleScreenState extends State<WeeklyScheduleScreen> {
         // Convert backend sessions to grid format
         setState(() {
           _mySessions = sessions.map((session) {
-            // Parse start and end times to get day index and slot index
             final startTime = DateTime.parse(session['startTime']).toLocal();
             final endTime = DateTime.parse(session['endTime']).toLocal();
-            final dayIndex = startTime.weekday == 7 ? 0 : startTime.weekday;
+            int dayIndex;
+            if (startTime.weekday == 7) {
+              dayIndex = 0;
+            } else if (startTime.weekday >= 1 && startTime.weekday <= 4) {
+              dayIndex = startTime.weekday;
+            } else {
+              dayIndex = -1; // Outside mock range
+            }
             
-            // Calculate slot index based on start time
             final hour = startTime.hour;
             final minute = startTime.minute;
             int slotIndex = 0;
-            
             if (hour >= 8) slotIndex = 0; 
             if (hour > 9 || (hour == 9 && minute >= 30)) slotIndex = 1; 
             if (hour >= 11) slotIndex = 2;
@@ -73,13 +77,13 @@ class _WeeklyScheduleScreenState extends State<WeeklyScheduleScreen> {
               'groupName': session['group']['name'],
               'labId': session['lab']['id'],
               'labName': session['lab']['name'],
-              'day': ScheduleMockData.weekDays[dayIndex],
+              'day': dayIndex != -1 ? ScheduleMockData.weekDays[dayIndex] : 'Unknown',
               'startTime': '${startTime.hour.toString().padLeft(2, '0')}:${startTime.minute.toString().padLeft(2, '0')}',
               'endTime': '${endTime.hour.toString().padLeft(2, '0')}:${endTime.minute.toString().padLeft(2, '0')}',
               'dayIndex': dayIndex,
               'slotIndex': slotIndex,
             };
-          }).toList();
+          }).where((session) => session['dayIndex'] != -1).toList();
           _isLoading = false;
         });
       } else {
