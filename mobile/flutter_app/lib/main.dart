@@ -26,12 +26,12 @@ void main() async {
     try {
       await Firebase.initializeApp();
       await NotificationService().init();
-      print('🔥 Firebase & Notifications Initialized');
+      debugPrint('🔥 Firebase & Notifications Initialized');
     } catch (e) {
-      print('⚠️ Initialization Failed: $e');
+      debugPrint('⚠️ Initialization Failed: $e');
     }
   } else {
-    print('ℹ️ Skipping Firebase on Web (not configured)');
+    debugPrint('ℹ️ Skipping Firebase on Web (not configured)');
   }
 
   runApp(
@@ -65,7 +65,6 @@ class QronoApp extends StatelessWidget {
     
     return OverlaySupport.global(
       child: MaterialApp(
-        builder: (context, child) => OverlaySupport.global(child: child!),
         title: 'Qrono',
         locale: localizationProvider.locale,
         supportedLocales: context.supportedLocales,

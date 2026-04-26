@@ -56,7 +56,7 @@ class _ProfessorNotificationsScreenState extends State<ProfessorNotificationsScr
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.notifications_none_outlined, size: 80, color: AppColors.grayText.withOpacity(0.5)),
+          Icon(Icons.notifications_none_outlined, size: 80, color: AppColors.grayText.withValues(alpha: 0.5)),
           const SizedBox(height: 16),
           const Text('Pas de nouvelles notifications.', style: TextStyle(color: AppColors.grayText)),
         ],
@@ -113,3 +113,4 @@ class _ProfessorNotificationsScreenState extends State<ProfessorNotificationsScr
     );
   }
 }
+

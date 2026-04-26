@@ -128,31 +128,31 @@ class _WirelessSettingsTabState extends State<WirelessSettingsTab> {
             color: Colors.white,
             borderRadius: BorderRadius.circular(18),
             boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))
+              BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4))
             ],
           ),
-          child: Column(
-            children: [
-              RadioListTile<bool>(
-                title: Text('local_network'.tr(), style: const TextStyle(fontWeight: FontWeight.w700)),
-                subtitle: Text(ApiConstants.defaultBaseUrl, style: const TextStyle(fontSize: 12)),
-                value: false,
-                activeColor: AppColors.primaryTeal,
-                groupValue: _isWirelessMode,
-                onChanged: _toggleConnectionMode,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-              ),
-              const Divider(height: 1, indent: 20, endIndent: 20),
-              RadioListTile<bool>(
-                title: Text('wireless_cloudflare'.tr(), style: const TextStyle(fontWeight: FontWeight.w700)),
-                subtitle: Text('custom_tunnel_url'.tr(), style: const TextStyle(fontSize: 12)),
-                value: true,
-                activeColor: AppColors.primaryTeal,
-                groupValue: _isWirelessMode,
-                onChanged: _toggleConnectionMode,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-              ),
-            ],
+          child: RadioGroup<bool>(
+            groupValue: _isWirelessMode,
+            onChanged: _toggleConnectionMode,
+            child: Column(
+              children: [
+                RadioListTile<bool>(
+                  title: Text('local_network'.tr(), style: const TextStyle(fontWeight: FontWeight.w700)),
+                  subtitle: Text(ApiConstants.defaultBaseUrl, style: const TextStyle(fontSize: 12)),
+                  value: false,
+                  activeColor: AppColors.primaryTeal,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                ),
+                const Divider(height: 1, indent: 20, endIndent: 20),
+                RadioListTile<bool>(
+                  title: Text('wireless_cloudflare'.tr(), style: const TextStyle(fontWeight: FontWeight.w700)),
+                  subtitle: Text('custom_tunnel_url'.tr(), style: const TextStyle(fontSize: 12)),
+                  value: true,
+                  activeColor: AppColors.primaryTeal,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                ),
+              ],
+            ),
           ),
         ),
         if (_isWirelessMode) ...[
@@ -167,7 +167,7 @@ class _WirelessSettingsTabState extends State<WirelessSettingsTab> {
               color: Colors.white,
               borderRadius: BorderRadius.circular(18),
               boxShadow: [
-                BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))
+                BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4))
               ],
             ),
             child: TextField(
@@ -203,7 +203,7 @@ class _WirelessSettingsTabState extends State<WirelessSettingsTab> {
                 backgroundColor: AppColors.primaryTeal,
                 foregroundColor: Colors.white,
                 elevation: 4,
-                shadowColor: AppColors.primaryTeal.withOpacity(0.3),
+                shadowColor: AppColors.primaryTeal.withValues(alpha: 0.3),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
               ),
               child: Text('apply_wireless_settings'.tr(), style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900, letterSpacing: 1)),
@@ -214,9 +214,9 @@ class _WirelessSettingsTabState extends State<WirelessSettingsTab> {
         Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: Colors.blue.withOpacity(0.05),
+            color: Colors.blue.withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: Colors.blue.withOpacity(0.1)),
+            border: Border.all(color: Colors.blue.withValues(alpha: 0.1)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -239,6 +239,8 @@ class _WirelessSettingsTabState extends State<WirelessSettingsTab> {
             ],
           ),
         ),
+      ],
     );
   }
 }
+

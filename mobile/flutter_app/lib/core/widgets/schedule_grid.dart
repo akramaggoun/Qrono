@@ -96,14 +96,14 @@ class ScheduleGrid extends StatelessWidget {
                         padding: const EdgeInsets.all(4.0),
                         decoration: BoxDecoration(
                           border: Border(
-                            left: BorderSide(color: AppColors.borderColor.withOpacity(0.5)),
-                            top: BorderSide(color: AppColors.borderColor.withOpacity(0.5)),
+                            left: BorderSide(color: AppColors.borderColor.withValues(alpha: 0.5)),
+                            top: BorderSide(color: AppColors.borderColor.withValues(alpha: 0.5)),
                             bottom: dayIndex == ScheduleMockData.weekDays.length - 1 
-                                ? BorderSide(color: AppColors.borderColor.withOpacity(0.5)) : BorderSide.none,
+                                ? BorderSide(color: AppColors.borderColor.withValues(alpha: 0.5)) : BorderSide.none,
                             right: slotIndex == ScheduleMockData.timeSlots.length - 1 
-                                ? BorderSide(color: AppColors.borderColor.withOpacity(0.5)) : BorderSide.none,
+                                ? BorderSide(color: AppColors.borderColor.withValues(alpha: 0.5)) : BorderSide.none,
                           ),
-                          color: isTodayRow ? AppColors.primaryTeal.withOpacity(0.05) : Colors.transparent,
+                          color: isTodayRow ? AppColors.primaryTeal.withValues(alpha: 0.05) : Colors.transparent,
                         ),
                         child: isFilled
                             ? _buildFilledCell(session)
@@ -143,7 +143,7 @@ class ScheduleGrid extends StatelessWidget {
     if (!isAdmin) {
       return Container(
         decoration: BoxDecoration(
-          color: AppColors.cardColor.withOpacity(0.4),
+          color: AppColors.cardColor.withValues(alpha: 0.4),
           borderRadius: BorderRadius.circular(6),
         ),
       );
@@ -169,8 +169,8 @@ class ScheduleGrid extends StatelessWidget {
       onTap: () => onFilledCellTap(session),
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.primaryTeal.withOpacity(0.1),
-          border: Border.all(color: AppColors.primaryTeal.withOpacity(0.3)),
+          color: AppColors.primaryTeal.withValues(alpha: 0.1),
+          border: Border.all(color: AppColors.primaryTeal.withValues(alpha: 0.3)),
           borderRadius: BorderRadius.circular(6),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 6.0, vertical: 4.0),

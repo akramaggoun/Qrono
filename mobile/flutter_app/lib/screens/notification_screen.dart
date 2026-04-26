@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../providers/notification_provider.dart';
 import '../../models/notification_model.dart';
-import 'package:intl/intl.dart';
 import 'package:easy_localization/easy_localization.dart';
 
 class NotificationScreen extends StatefulWidget {
@@ -62,7 +61,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.notifications_off_rounded, size: 80, color: Colors.grey.withOpacity(0.2)),
+                  Icon(Icons.notifications_off_rounded, size: 80, color: Colors.grey.withValues(alpha: 0.2)),
                   const SizedBox(height: 16),
                   Text('no_notifications_yet'.tr(), 
                     style: const TextStyle(color: Color(0xFF9E9E9E), fontSize: 16, fontWeight: FontWeight.w500)),
@@ -106,12 +105,12 @@ class _NotificationCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(22),
         boxShadow: [
           BoxShadow(
-            color: isUnread ? AppColors.primaryTeal.withOpacity(0.08) : Colors.black.withOpacity(0.03),
+            color: isUnread ? AppColors.primaryTeal.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.03),
             blurRadius: 12,
             offset: const Offset(0, 4)
           )
         ],
-        border: isUnread ? Border.all(color: AppColors.primaryTeal.withOpacity(0.2), width: 1) : null,
+        border: isUnread ? Border.all(color: AppColors.primaryTeal.withValues(alpha: 0.2), width: 1) : null,
       ),
       child: InkWell(
         onTap: () {
@@ -162,7 +161,7 @@ class _NotificationCard extends StatelessWidget {
                       const SizedBox(height: 10),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(color: AppColors.primaryTeal.withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
+                        decoration: BoxDecoration(color: AppColors.primaryTeal.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
                         child: Text('new_badge'.tr(), style: const TextStyle(color: AppColors.primaryTeal, fontSize: 9, fontWeight: FontWeight.w900)),
                       ),
                     ],
@@ -205,7 +204,7 @@ class _NotificationCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: iconColor.withOpacity(0.1),
+        color: iconColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Icon(iconData, color: iconColor, size: 22),
@@ -225,3 +224,4 @@ class _NotificationCard extends StatelessWidget {
     }
   }
 }
+

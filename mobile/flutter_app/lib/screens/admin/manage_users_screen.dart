@@ -1,11 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import '../../core/constants/app_colors.dart';
 import '../../models/user_model.dart';
-import '../../models/student_model.dart';
-import '../../models/professor_model.dart';
-import '../../models/admin_model.dart';
-import '../../models/group_model.dart';
 import '../../providers/admin_provider.dart';
 import 'package:provider/provider.dart';
 import '../../core/storage/token_storage.dart';
@@ -37,9 +32,9 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
 
   Future<void> _checkToken() async {
     final token = await TokenStorage.getToken();
-    print('🔑 TOKEN IN ADMIN SCREEN: $token');
+    debugPrint('🔑 TOKEN IN ADMIN SCREEN: $token');
     if (token == null && mounted) {
-      print('❌ NO TOKEN — Redirecting to login');
+      debugPrint('❌ NO TOKEN — Redirecting to login');
       // Navigator.pushReplacementNamed(context, '/login') per instructions
       Navigator.of(context).pushReplacementNamed('/login');
     }
@@ -103,7 +98,7 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
     final passwordCtrl  = TextEditingController();  // jamais pré-remplie pour la sécurité
     final extra1Ctrl    = TextEditingController(text: user?.matricule ?? '');
     final extra2Ctrl    = TextEditingController();
-    bool _passwordVisible = false;
+    bool passwordVisible = false;
     final formKey = GlobalKey<FormState>();
 
     showModalBottomSheet(
@@ -127,7 +122,7 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: _roleColor(user ?? UserModel(id: '', matricule: '', fullName: '', email: '', isActive: true, createdAt: DateTime.now(), role: 'student')).withOpacity(0.1),
+                        color: _roleColor(user ?? UserModel(id: '', matricule: '', fullName: '', email: '', isActive: true, createdAt: DateTime.now(), role: 'student')).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Icon(Icons.manage_accounts_outlined, color: AppColors.primaryTeal),
@@ -144,7 +139,7 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
 
                   // IHM : sélection du rôle en premier = oriente le reste du formulaire
                   DropdownButtonFormField<String>(
-                    value: selectedRole,
+                    initialValue: selectedRole,
                     decoration: InputDecoration(labelText: 'role_required'.tr(), prefixIcon: const Icon(Icons.manage_accounts_outlined)),
                     items: [
                       DropdownMenuItem(value: 'student',   child: Text('filter_student'.tr())),
@@ -190,15 +185,15 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
                   StatefulBuilder(
                     builder: (_, setPwdState) => TextFormField(
                       controller: passwordCtrl,
-                      obscureText: !_passwordVisible,
+                      obscureText: !passwordVisible,
                       decoration: InputDecoration(
                         labelText: isEditing ? 'new_password_optional'.tr() : 'temp_password_required'.tr(),
                         hintText: isEditing ? 'leave_empty_keep_current'.tr() : 'min_6_chars'.tr(),
                         prefixIcon: const Icon(Icons.lock_outline),
                         suffixIcon: IconButton(
-                          icon: Icon(_passwordVisible ? Icons.visibility : Icons.visibility_off,
+                          icon: Icon(passwordVisible ? Icons.visibility : Icons.visibility_off,
                               color: AppColors.grayText, size: 20),
-                          onPressed: () => setPwdState(() => _passwordVisible = !_passwordVisible),
+                          onPressed: () => setPwdState(() => passwordVisible = !passwordVisible),
                         ),
                       ),
                       validator: (v) {
@@ -212,7 +207,7 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
 
                   if (selectedRole == 'student' && adminProvider.groups.isNotEmpty) ...[
                     DropdownButtonFormField<String>(
-                      value: selectedGroupId,
+                      initialValue: selectedGroupId,
                       decoration: InputDecoration(labelText: 'group_label'.tr(), prefixIcon: const Icon(Icons.groups_outlined)),
                       items: adminProvider.groups.map((g) => DropdownMenuItem(value: g.id, child: Text(g.name))).toList(),
                       onChanged: (v) => setSheet(() => selectedGroupId = v),
@@ -237,7 +232,7 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
                   SwitchListTile(
                     value: isActive,
                     onChanged: (v) => setSheet(() => isActive = v),
-                    activeColor: AppColors.primaryTeal,
+                    activeThumbColor: AppColors.primaryTeal,
                     title: Text('account_active'.tr(), style: const TextStyle(fontWeight: FontWeight.w600)),
                     subtitle: Text(isActive ? 'user_can_login'.tr() : 'access_disabled'.tr(),
                         style: TextStyle(fontSize: 11, color: isActive ? Colors.green : Colors.redAccent)),
@@ -253,9 +248,9 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
                         icon: Icon(isEditing ? Icons.save_outlined : Icons.person_add_alt, size: 18),
                         label: Text(isEditing ? 'update_btn'.tr() : 'create_btn'.tr()),
                         onPressed: () async {
-                          print('🔴 BUTTON PRESSED: Add/Edit User');
+                          debugPrint('🔴 BUTTON PRESSED: Add/Edit User');
                           final isValid = formKey.currentState!.validate();
-                          print('🟡 FORM VALID: $isValid');
+                          debugPrint('🟡 FORM VALID: $isValid');
                           if (!isValid) return;
                           
                           final userData = {
@@ -274,7 +269,7 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
                             },
                           };
 
-                          print('🟠 CALLING adminProvider.addUser/updateUser()');
+                          debugPrint('🟠 CALLING adminProvider.addUser/updateUser()');
                           bool success;
                           if (isEditing) {
                             success = await adminProvider.updateUser(user.id, userData);
@@ -282,7 +277,7 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
                             success = await adminProvider.addUser(userData);
                           }
 
-                          if (!mounted) return;
+                          if (!context.mounted) return;
 
                           if (success) {
                             Navigator.pop(ctx);
@@ -335,10 +330,14 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
             onPressed: () async {
-              final success = await Provider.of<AdminProvider>(context, listen: false).deleteUser(user.id);
-              if (success && mounted) {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              final navigator = Navigator.of(context);
+              final messenger = ScaffoldMessenger.of(context);
+              final adminProvider = Provider.of<AdminProvider>(context, listen: false);
+
+              final success = await adminProvider.deleteUser(user.id);
+              if (success) {
+                navigator.pop();
+                messenger.showSnackBar(SnackBar(
                   content: Row(children: [
                     const Icon(Icons.delete_outline, color: Colors.white, size: 18),
                     const SizedBox(width: 8),
@@ -429,7 +428,7 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
                                 duration: const Duration(milliseconds: 200),
                                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                                 decoration: BoxDecoration(
-                                  color: sel ? c.withOpacity(0.1) : Colors.transparent,
+                                  color: sel ? c.withValues(alpha: 0.1) : Colors.transparent,
                                   borderRadius: BorderRadius.circular(20),
                                   border: Border.all(color: sel ? c : Colors.grey.shade300),
                                 ),
@@ -454,7 +453,7 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
                     : ListView.separated(
                         padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
                         itemCount: filtered.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 10),
+                        separatorBuilder: (_, _) => const SizedBox(height: 10),
                         itemBuilder: (_, i) => _buildUserCard(filtered[i]),
                       ),
               ),
@@ -478,14 +477,14 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
         decoration: BoxDecoration(
           color: AppColors.cardColor,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: user.isActive ? AppColors.borderColor : Colors.redAccent.withOpacity(0.25)),
+          border: Border.all(color: user.isActive ? AppColors.borderColor : Colors.redAccent.withValues(alpha: 0.25)),
         ),
         child: ListTile(
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           leading: Stack(alignment: Alignment.bottomRight, children: [
             CircleAvatar(
               radius: 22,
-              backgroundColor: color.withOpacity(0.1),
+              backgroundColor: color.withValues(alpha: 0.1),
               child: Icon(_roleIcon(user), color: color, size: 22),
             ),
             // IHM : indicateur de statut en overlay — 2 infos en 1 espace
@@ -506,7 +505,7 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
               Row(children: [
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                  decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
+                  decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
                   child: Text(_roleName(user), style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: color)),
                 ),
                 const SizedBox(width: 6),
@@ -523,3 +522,7 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
     );
   }
 }
+
+
+
+

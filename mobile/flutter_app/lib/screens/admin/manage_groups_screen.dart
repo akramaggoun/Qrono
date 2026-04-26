@@ -66,7 +66,7 @@ class _ManageGroupsScreenState extends State<ManageGroupsScreen> {
                 children: [
                   Container(
                     padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(color: Colors.purple.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+                    decoration: BoxDecoration(color: Colors.purple.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
                     child: const Icon(Icons.groups, color: Colors.purple),
                   ),
                   const SizedBox(width: 12),
@@ -120,9 +120,9 @@ class _ManageGroupsScreenState extends State<ManageGroupsScreen> {
                         icon: Icon(isEditing ? Icons.save_outlined : Icons.add, size: 18),
                         label: Text(isEditing ? 'save'.tr() : 'create_btn'.tr()),
                         onPressed: () async {
-                          print('🔴 BUTTON PRESSED: Add/Edit Group');
+                          debugPrint('🔴 BUTTON PRESSED: Add/Edit Group');
                           final isValid = formKey.currentState!.validate();
-                          print('🟡 FORM VALID: $isValid');
+                          debugPrint('🟡 FORM VALID: $isValid');
                           if (!isValid) return;
                           
                           final adminProvider = Provider.of<AdminProvider>(context, listen: false);
@@ -133,7 +133,7 @@ class _ManageGroupsScreenState extends State<ManageGroupsScreen> {
                             'specialty': specialtyCtrl.text.trim(),
                           };
 
-                          print('🟠 CALLING adminProvider.addGroup/updateGroup()');
+                          debugPrint('🟠 CALLING adminProvider.addGroup/updateGroup()');
                           bool success;
                           if (isEditing) {
                             success = await adminProvider.updateGroup(group.id, groupData);
@@ -141,7 +141,7 @@ class _ManageGroupsScreenState extends State<ManageGroupsScreen> {
                             success = await adminProvider.addGroup(groupData);
                           }
 
-                          if (!mounted) return;
+                          if (!context.mounted) return;
 
                           if (success) {
                             Navigator.pop(context);
@@ -194,10 +194,14 @@ class _ManageGroupsScreenState extends State<ManageGroupsScreen> {
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
             onPressed: () async {
-              final success = await Provider.of<AdminProvider>(context, listen: false).deleteGroup(group.id);
-              if (success && mounted) {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              final navigator = Navigator.of(context);
+              final messenger = ScaffoldMessenger.of(context);
+              final adminProvider = Provider.of<AdminProvider>(context, listen: false);
+
+              final success = await adminProvider.deleteGroup(group.id);
+              if (success) {
+                navigator.pop();
+                messenger.showSnackBar(SnackBar(
                   content: Row(children: [
                     const Icon(Icons.delete_outline, color: Colors.white, size: 18),
                     const SizedBox(width: 8),
@@ -276,7 +280,7 @@ class _ManageGroupsScreenState extends State<ManageGroupsScreen> {
                     : ListView.separated(
                         padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
                         itemCount: filtered.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 10),
+                        separatorBuilder: (_, _) => const SizedBox(height: 10),
                         itemBuilder: (_, i) => _buildGroupCard(filtered[i]),
                       ),
               ),
@@ -299,7 +303,7 @@ class _ManageGroupsScreenState extends State<ManageGroupsScreen> {
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         leading: Container(
           width: 44, height: 44,
-          decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+          decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
           child: Icon(Icons.groups, color: color),
         ),
         title: Text(group.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
@@ -311,7 +315,7 @@ class _ManageGroupsScreenState extends State<ManageGroupsScreen> {
             Row(children: [
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
+                decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
                 child: Text(group.yearLevel, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: color)),
               ),
               const SizedBox(width: 6),
@@ -352,3 +356,7 @@ class _ManageGroupsScreenState extends State<ManageGroupsScreen> {
     );
   }
 }
+
+
+
+

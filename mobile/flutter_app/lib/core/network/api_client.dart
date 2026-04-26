@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../storage/token_storage.dart';
 import '../config/api_config.dart';
@@ -6,10 +7,10 @@ import '../config/api_config.dart';
 class ApiClient {
   Future<Map<String, String>> get _headers async {
     final token = await TokenStorage.getToken();
-    print('🔑 SENDING TOKEN: $token');
+    debugPrint('🔑 SENDING TOKEN: $token');
     
     if (token == null) {
-      print('❌ TOKEN IS NULL — User not logged in!');
+      debugPrint('❌ TOKEN IS NULL — User not logged in!');
     }
     
     return {
@@ -23,11 +24,11 @@ class ApiClient {
     final url = path.startsWith('http') ? path : '${ApiConfig.baseUrl}$path';
     final token = headers['Authorization'];
 
-    print('🌐 REQUEST: GET $url');
-    print('🔑 TOKEN: $token');
+    debugPrint('🌐 REQUEST: GET $url');
+    debugPrint('🔑 TOKEN: $token');
 
     final response = await http.get(Uri.parse(url), headers: headers);
-    print('✅ RESPONSE ${response.statusCode}: ${response.body}');
+    debugPrint('✅ RESPONSE ${response.statusCode}: ${response.body}');
     return response;
   }
 
@@ -36,9 +37,9 @@ class ApiClient {
     final url = path.startsWith('http') ? path : '${ApiConfig.baseUrl}$path';
     final token = headers['Authorization'];
 
-    print('🌐 REQUEST: POST $url');
-    print('📦 BODY: $body');
-    print('🔑 TOKEN: $token');
+    debugPrint('🌐 REQUEST: POST $url');
+    debugPrint('📦 BODY: $body');
+    debugPrint('🔑 TOKEN: $token');
 
     final response = await http.post(
       Uri.parse(url),
@@ -46,7 +47,7 @@ class ApiClient {
       headers: headers,
     );
     
-    print('✅ RESPONSE ${response.statusCode}: ${response.body}');
+    debugPrint('✅ RESPONSE ${response.statusCode}: ${response.body}');
     return response;
   }
 
@@ -54,15 +55,15 @@ class ApiClient {
     final headers = await _headers;
     final url = path.startsWith('http') ? path : '${ApiConfig.baseUrl}$path';
     
-    print('🌐 REQUEST: PUT $url');
-    print('📦 BODY: $body');
+    debugPrint('🌐 REQUEST: PUT $url');
+    debugPrint('📦 BODY: $body');
     
     final response = await http.put(
       Uri.parse(url),
       body: jsonEncode(body),
       headers: headers,
     );
-    print('✅ RESPONSE ${response.statusCode}: ${response.body}');
+    debugPrint('✅ RESPONSE ${response.statusCode}: ${response.body}');
     return response;
   }
 
@@ -70,14 +71,14 @@ class ApiClient {
     final headers = await _headers;
     final url = path.startsWith('http') ? path : '${ApiConfig.baseUrl}$path';
     
-    print('🌐 REQUEST: PATCH $url');
+    debugPrint('🌐 REQUEST: PATCH $url');
     
     final response = await http.patch(
       Uri.parse(url),
       body: jsonEncode(body),
       headers: headers,
     );
-    print('✅ RESPONSE ${response.statusCode}: ${response.body}');
+    debugPrint('✅ RESPONSE ${response.statusCode}: ${response.body}');
     return response;
   }
 
@@ -85,10 +86,10 @@ class ApiClient {
     final headers = await _headers;
     final url = path.startsWith('http') ? path : '${ApiConfig.baseUrl}$path';
     
-    print('🌐 REQUEST: DELETE $url');
+    debugPrint('🌐 REQUEST: DELETE $url');
     
     final response = await http.delete(Uri.parse(url), headers: headers);
-    print('✅ RESPONSE ${response.statusCode}: ${response.body}');
+    debugPrint('✅ RESPONSE ${response.statusCode}: ${response.body}');
     return response;
   }
 }

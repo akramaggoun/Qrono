@@ -90,7 +90,7 @@ class _WeeklyScheduleScreenState extends State<WeeklyScheduleScreen> {
         throw Exception('Failed to fetch sessions: ${response.statusCode}');
       }
     } catch (e) {
-      print('Error fetching sessions from database: $e');
+      debugPrint('Error fetching sessions from database: $e');
       setState(() {
         _mySessions = [];
         _isLoading = false;
@@ -289,3 +289,4 @@ class _WeeklyScheduleScreenState extends State<WeeklyScheduleScreen> {
     );
   }
 }
+

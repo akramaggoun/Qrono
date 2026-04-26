@@ -2,7 +2,6 @@ import 'user_model.dart';
 
 class ProfessorModel extends UserModel {
   final String professorCode;
-  final String department;
 
   ProfessorModel({
     required super.id,
@@ -12,9 +11,9 @@ class ProfessorModel extends UserModel {
     required super.createdAt,
     required super.email,
     required this.professorCode,
-    required this.department,
+    required String department,
     super.phone,
-  }) : super(role: 'professor');
+  }) : super(role: 'professor', department: department);
 
   factory ProfessorModel.fromJson(Map<String, dynamic> json) {
     return ProfessorModel(

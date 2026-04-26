@@ -10,7 +10,6 @@ import '../auth/login_screen.dart';
 import '../../core/constants/app_colors.dart';
 import 'scanner_screen.dart';
 import 'my_attendance_screen.dart';
-import '../../core/config/api_config.dart';
 
 class StudentDashboard extends StatefulWidget {
   const StudentDashboard({super.key});
@@ -69,17 +68,15 @@ class _StudentDashboardState extends State<StudentDashboard> {
           final attendances = presenceProvider.myAttendances;
           final presentCount = attendances.length;
           final totalSessions = Provider.of<SessionProvider>(context).sessions.length; 
-          final totalSessionsSafe = totalSessions == 0 ? 1 : totalSessions; // avoid div by zero
           if (presenceProvider.isLoading && attendances.isEmpty) {
             return const Center(child: CircularProgressIndicator(color: AppColors.primaryTeal));
           }
 
           return RefreshIndicator(
             onRefresh: () async {
+              final sessionProvider = Provider.of<SessionProvider>(context, listen: false);
               await presenceProvider.fetchMyAttendances();
-              if (mounted) {
-                await Provider.of<SessionProvider>(context, listen: false).fetchStudentSessions();
-              }
+              await sessionProvider.fetchStudentSessions();
             },
             color: AppColors.primaryTeal,
             child: SingleChildScrollView(
@@ -115,7 +112,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
         alignment: Alignment.center,
         children: [
           Container(
-            decoration: BoxDecoration(color: Colors.grey.withOpacity(0.05), shape: BoxShape.circle),
+            decoration: BoxDecoration(color: Colors.grey.withValues(alpha: 0.05), shape: BoxShape.circle),
             child: IconButton(
               icon: const Icon(Icons.notifications_none_rounded, color: Color(0xFF1A1C1E)),
               onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationScreen())),
@@ -156,8 +153,8 @@ class _StudentDashboardState extends State<StudentDashboard> {
           height: 56, width: 56,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            gradient: LinearGradient(colors: [AppColors.primaryTeal.withOpacity(0.1), Colors.white]),
-            border: Border.all(color: AppColors.primaryTeal.withOpacity(0.2)),
+            gradient: LinearGradient(colors: [AppColors.primaryTeal.withValues(alpha: 0.1), Colors.white]),
+            border: Border.all(color: AppColors.primaryTeal.withValues(alpha: 0.2)),
           ),
           child: const Icon(Icons.person_pin_rounded, color: AppColors.primaryTeal, size: 32),
         ),
@@ -179,7 +176,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
             end: Alignment.bottomRight,
           ),
           boxShadow: [
-            BoxShadow(color: AppColors.primaryTeal.withOpacity(0.3), blurRadius: 20, offset: const Offset(0, 10))
+            BoxShadow(color: AppColors.primaryTeal.withValues(alpha: 0.3), blurRadius: 20, offset: const Offset(0, 10))
           ],
         ),
         child: Row(
@@ -218,7 +215,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 12, offset: const Offset(0, 6))
+          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 12, offset: const Offset(0, 6))
         ],
       ),
       child: Column(
@@ -233,14 +230,14 @@ class _StudentDashboardState extends State<StudentDashboard> {
           const SizedBox(height: 20),
           Stack(
             children: [
-              Container(height: 12, decoration: BoxDecoration(color: Colors.grey.withOpacity(0.08), borderRadius: BorderRadius.circular(6))),
+              Container(height: 12, decoration: BoxDecoration(color: Colors.grey.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(6))),
               AnimatedContainer(
                 duration: const Duration(seconds: 1),
                 height: 12, width: MediaQuery.of(context).size.width * 0.7 * progress,
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(colors: [AppColors.primaryTeal, Color(0xFF4DB6AC)]),
                   borderRadius: BorderRadius.circular(6),
-                  boxShadow: [BoxShadow(color: Colors.teal.withOpacity(0.2), blurRadius: 6, offset: const Offset(0, 3))]
+                  boxShadow: [BoxShadow(color: Colors.teal.withValues(alpha: 0.2), blurRadius: 6, offset: const Offset(0, 3))]
                 ),
               ),
             ],
@@ -325,21 +322,21 @@ class _StudentDashboardState extends State<StudentDashboard> {
     );
   }
 
-  Widget _buildStatCard(String title, String value, IconData icon, Color color, {bool isFullWidth = false}) {
+  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))
+          BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4))
         ],
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(color: color.withOpacity(0.1), shape: BoxShape.circle),
+            decoration: BoxDecoration(color: color.withValues(alpha: 0.1), shape: BoxShape.circle),
             child: Icon(icon, color: color, size: 24),
           ),
           const SizedBox(width: 12),
@@ -380,7 +377,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
           padding: const EdgeInsets.symmetric(vertical: 40),
           child: Column(
             children: [
-              Icon(Icons.history_toggle_off_rounded, size: 64, color: Colors.grey.withOpacity(0.2)),
+              Icon(Icons.history_toggle_off_rounded, size: 64, color: Colors.grey.withValues(alpha: 0.2)),
               const SizedBox(height: 16),
               Text('no_presence_recorded'.tr(), 
                 style: TextStyle(color: Color(0xFF9E9E9E), fontSize: 14, fontWeight: FontWeight.w500)),
@@ -404,13 +401,13 @@ class _StudentDashboardState extends State<StudentDashboard> {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 8, offset: const Offset(0, 4))],
+            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 8, offset: const Offset(0, 4))],
           ),
           child: Row(
             children: [
               Container(
                 padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(color: Colors.green.withOpacity(0.08), shape: BoxShape.circle),
+                decoration: BoxDecoration(color: Colors.green.withValues(alpha: 0.08), shape: BoxShape.circle),
                 child: const Icon(Icons.check_circle_rounded, color: Colors.green, size: 24),
               ),
               const SizedBox(width: 16),
@@ -447,13 +444,13 @@ class _StudentDashboardState extends State<StudentDashboard> {
             onPressed: () async {
               Navigator.pop(ctx);
               final authProvider = Provider.of<AuthProvider>(context, listen: false);
+              final navigator = Navigator.of(context);
               await authProvider.logout();
-              if (mounted) {
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (_) => const LoginScreen()),
-                  (route) => false,
-                );
-              }
+              
+              navigator.pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const LoginScreen()),
+                (route) => false,
+              );
             },
             child: Text('logout'.tr(), style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
           ),
@@ -462,5 +459,6 @@ class _StudentDashboardState extends State<StudentDashboard> {
     );
   }
 }
+
 
 

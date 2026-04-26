@@ -105,7 +105,7 @@ class _UnauthorizedLogsScreenState extends State<UnauthorizedLogsScreen> {
   Widget _buildSeverityChip(String count, String label, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
+      decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -126,22 +126,22 @@ class _UnauthorizedLogsScreenState extends State<UnauthorizedLogsScreen> {
       decoration: BoxDecoration(
         color: cardColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: severityColor.withOpacity(0.25)),
-        boxShadow: [BoxShadow(color: severityColor.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, 4))],
+        border: Border.all(color: severityColor.withValues(alpha: 0.25)),
+        boxShadow: [BoxShadow(color: severityColor.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 4))],
       ),
       child: Column(
         children: [
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: severityColor.withOpacity(0.06),
+              color: severityColor.withValues(alpha: 0.06),
               borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
             ),
             child: Row(
               children: [
                 CircleAvatar(
                   radius: 18,
-                  backgroundColor: severityColor.withOpacity(0.15),
+                  backgroundColor: severityColor.withValues(alpha: 0.15),
                   child: Text(log.id.substring(0,1).toUpperCase(), style: TextStyle(fontWeight: FontWeight.bold, color: severityColor)),
                 ),
                 const SizedBox(width: 12),
@@ -156,7 +156,7 @@ class _UnauthorizedLogsScreenState extends State<UnauthorizedLogsScreen> {
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(color: severityColor.withOpacity(0.12), borderRadius: BorderRadius.circular(20)),
+                  decoration: BoxDecoration(color: severityColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(20)),
                   child: Text(severityLabel, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: severityColor)),
                 ),
               ],
@@ -213,3 +213,4 @@ class _UnauthorizedLogsScreenState extends State<UnauthorizedLogsScreen> {
     );
   }
 }
+
