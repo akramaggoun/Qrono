@@ -17,7 +17,6 @@ class ScannerScreen extends StatefulWidget {
 class _ScannerScreenState extends State<ScannerScreen> {
   final MobileScannerController controller = MobileScannerController();
   bool _isPermissionGranted = false;
-  bool _isCameraInitialized = false;
 
   @override
   void initState() {
@@ -40,9 +39,6 @@ class _ScannerScreenState extends State<ScannerScreen> {
   void _startCamera() async {
     try {
       await controller.start();
-      setState(() {
-        _isCameraInitialized = true;
-      });
     } catch (e) {
       debugPrint('Error starting camera: $e');
     }

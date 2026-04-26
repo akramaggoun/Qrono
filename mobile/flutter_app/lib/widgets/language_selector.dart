@@ -22,7 +22,7 @@ class LanguageSelectorDialog extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: AppColors.primaryTeal.withOpacity(0.1),
+                    color: AppColors.primaryTeal.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Icon(
@@ -151,7 +151,7 @@ class _LanguageOptionTile extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primaryTeal.withOpacity(0.1) : AppColors.cardColor,
+          color: isSelected ? AppColors.primaryTeal.withValues(alpha: 0.1) : AppColors.cardColor,
           border: Border.all(
             color: isSelected ? AppColors.primaryTeal : Colors.transparent,
             width: 2,
@@ -230,7 +230,7 @@ class LanguageSelectorButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -273,3 +273,4 @@ class LanguageSelectorButton extends StatelessWidget {
     );
   }
 }
+

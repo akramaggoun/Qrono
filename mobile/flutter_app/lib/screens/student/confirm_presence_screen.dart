@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
-import '../../providers/presence_provider.dart';
 
-import 'package:intl/intl.dart';
 import 'package:easy_localization/easy_localization.dart';
 
 class ConfirmPresenceScreen extends StatelessWidget {
@@ -60,7 +57,7 @@ class ConfirmPresenceScreen extends StatelessWidget {
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: AppColors.borderColor),
                 boxShadow: [
-                  BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 5)),
+                  BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10, offset: const Offset(0, 5)),
                 ],
               ),
               child: Column(
@@ -116,3 +113,4 @@ class ConfirmPresenceScreen extends StatelessWidget {
     );
   }
 }
+

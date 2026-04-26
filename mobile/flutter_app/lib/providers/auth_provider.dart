@@ -36,7 +36,7 @@ class AuthProvider extends ChangeNotifier {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        print('📥 LOGIN RESPONSE: $data');
+        debugPrint('📥 LOGIN RESPONSE: $data');
         final token = data['token'];
         final role = data['user']?['role']?.toString().toLowerCase(); // Bug 2: Normalize
         final name = data['user']?['name'] ?? 'Utilisateur';
@@ -46,8 +46,8 @@ class AuthProvider extends ChangeNotifier {
         await TokenStorage.saveRole(role ?? '');
         await TokenStorage.saveName(name);
 
-        print('✅ LOGIN SUCCESS - Token: $token');
-        print('✅ Role saved: $role');
+        debugPrint('✅ LOGIN SUCCESS - Token: $token');
+        debugPrint('✅ Role saved: $role');
 
         _userRole = role;
         _userName = name;
@@ -88,9 +88,12 @@ class AuthProvider extends ChangeNotifier {
   Future<void> logout() async {
     try {
       await _apiClient.post('/auth/logout', {});
-    } catch (e) {}
+    } catch (e) {
+      debugPrint('Logout error: $e');
+    }
     await TokenStorage.clearAuthData();
     _userRole = null;
     notifyListeners();
   }
 }
+

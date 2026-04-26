@@ -25,9 +25,4 @@ class AdminModel extends UserModel {
       phone: json['phone'],
     );
   }
-
-  @override
-  Map<String, dynamic> toJson() {
-    return super.toJson();
-  }
 }

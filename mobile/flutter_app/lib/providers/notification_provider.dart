@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import '../core/network/api_client.dart';
 import '../models/notification_model.dart';
 import '../core/config/api_config.dart';
@@ -30,8 +29,8 @@ class NotificationProvider extends ChangeNotifier {
 
     final socketUrl = ApiConfig.socketBaseUrl;
 
-    print('📡 Connecting to Notification Socket for user: $userId');
-    print('🌐 Socket URL: $socketUrl (${ApiConfig.connectionType})');
+    debugPrint('📡 Connecting to Notification Socket for user: $userId');
+    debugPrint('🌐 Socket URL: $socketUrl (${ApiConfig.connectionType})');
 
     _socket = io.io(socketUrl, io.OptionBuilder()
       .setTransports(['websocket'])
@@ -40,7 +39,7 @@ class NotificationProvider extends ChangeNotifier {
       .build());
 
     _socket!.onConnect((_) {
-      print('✅ Connected to Notification Server (${ApiConfig.connectionType})');
+      debugPrint('✅ Connected to Notification Server (${ApiConfig.connectionType})');
     });
 
     _socket!.on('notification:new', (data) {
@@ -49,12 +48,12 @@ class NotificationProvider extends ChangeNotifier {
         _showPopup(notification);
         _playSound(notification.type);
       } catch (e) {
-        print('⚠️ Error parsing real-time notification: $e');
+        debugPrint('⚠️ Error parsing real-time notification: $e');
       }
       fetchNotifications();
     });
 
-    _socket!.onDisconnect((_) => print('❌ Disconnected from Notification Server'));
+    _socket!.onDisconnect((_) => debugPrint('❌ Disconnected from Notification Server'));
   }
 
   void _playSound(String type) async {
@@ -76,7 +75,7 @@ class NotificationProvider extends ChangeNotifier {
     try {
       await _audioPlayer.play(AssetSource(soundFile));
     } catch (e) {
-      print('⚠️ Could not play notification sound: $e');
+      debugPrint('⚠️ Could not play notification sound: $e');
     }
   }
 
@@ -206,3 +205,4 @@ class NotificationProvider extends ChangeNotifier {
   // NOTE: On real device, FCM setup would be here to call fetchNotifications 
   // when a background message is received or app is opened via notification.
 }
+

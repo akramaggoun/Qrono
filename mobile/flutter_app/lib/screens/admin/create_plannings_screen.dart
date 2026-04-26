@@ -22,7 +22,10 @@ class _CreatePlanningsScreenState extends State<CreatePlanningsScreen> {
     super.initState();
     // Fetch professors, groups, and labs from database
     Future.microtask(
-      () => context.read<ScheduleProvider>().fetchLookups(),
+      () {
+        if (!mounted) return;
+        context.read<ScheduleProvider>().fetchLookups();
+      },
     );
   }
 
@@ -99,7 +102,7 @@ class _CreatePlanningsScreenState extends State<CreatePlanningsScreen> {
                   ),
                 )
               : DropdownButtonFormField<String>(
-                  value: _selectedProfessorId,
+                  initialValue: _selectedProfessorId,
                   decoration: InputDecoration(
                     labelText: 'select_professor_placeholder'.tr(),
                     labelStyle: const TextStyle(color: AppColors.primaryTeal),
@@ -141,7 +144,7 @@ class _CreatePlanningsScreenState extends State<CreatePlanningsScreen> {
           onPressed: canAssign ? () => _confirmAssignment(provider) : null,
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.primaryTeal,
-            disabledBackgroundColor: AppColors.grayText.withOpacity(0.3),
+            disabledBackgroundColor: AppColors.grayText.withValues(alpha: 0.3),
             padding: const EdgeInsets.symmetric(vertical: 16),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             elevation: 0,
@@ -360,7 +363,7 @@ class _SessionFormSheetState extends State<SessionFormSheet> {
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
               decoration: BoxDecoration(
-                color: AppColors.primaryTeal.withOpacity(0.1),
+                color: AppColors.primaryTeal.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
@@ -387,9 +390,8 @@ class _SessionFormSheetState extends State<SessionFormSheet> {
             const SizedBox(height: 16),
             
             DropdownButtonFormField<String>(
-              value: _selectedGroupId,
-              decoration: InputDecoration(
-                labelText: 'associated_group'.tr(),
+              initialValue: _selectedGroupId,
+              decoration: InputDecoration(                labelText: 'associated_group'.tr(),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
               ),
               items: widget.groups.isEmpty
@@ -409,7 +411,7 @@ class _SessionFormSheetState extends State<SessionFormSheet> {
             const SizedBox(height: 16),
 
             DropdownButtonFormField<String>(
-              value: _selectedLabId,
+              initialValue: _selectedLabId,
               decoration: InputDecoration(
                 labelText: 'associated_lab'.tr(),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
@@ -490,3 +492,5 @@ class _SessionFormSheetState extends State<SessionFormSheet> {
     }
   }
 }
+
+

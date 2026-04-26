@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -102,7 +101,7 @@ class _ShowQrScreenState extends State<ShowQrScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(
-                  color: _timeLeft.inSeconds > 0 ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
+                  color: _timeLeft.inSeconds > 0 ? Colors.green.withValues(alpha: 0.1) : Colors.red.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
@@ -138,7 +137,7 @@ class _ShowQrScreenState extends State<ShowQrScreen> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: AppColors.primaryTeal.withOpacity(0.05),
+                  color: AppColors.primaryTeal.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Column(
@@ -162,7 +161,7 @@ class _ShowQrScreenState extends State<ShowQrScreen> {
                   border: Border.all(color: AppColors.borderColor, width: 1),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.06),
+                      color: Colors.black.withValues(alpha: 0.06),
                       blurRadius: 30,
                       offset: const Offset(0, 15),
                     ),
@@ -216,7 +215,7 @@ class _ShowQrScreenState extends State<ShowQrScreen> {
                   onPressed: _handleCloseSession,
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 18),
-                    backgroundColor: Colors.redAccent.withOpacity(0.1),
+                    backgroundColor: Colors.redAccent.withValues(alpha: 0.1),
                     foregroundColor: Colors.redAccent,
                     elevation: 0,
                   ),
@@ -240,3 +239,4 @@ class _ShowQrScreenState extends State<ShowQrScreen> {
     );
   }
 }
+

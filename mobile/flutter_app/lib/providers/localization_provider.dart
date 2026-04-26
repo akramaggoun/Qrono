@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:easy_localization/easy_localization.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class LocalizationProvider extends ChangeNotifier {
@@ -41,7 +40,7 @@ class LocalizationProvider extends ChangeNotifier {
       
       notifyListeners();
     } catch (e) {
-      print('Error initializing language: $e');
+      debugPrint('Error initializing language: $e');
       _locale = const Locale('en');
       notifyListeners();
     }
@@ -55,7 +54,7 @@ class LocalizationProvider extends ChangeNotifier {
       
       notifyListeners();
     } catch (e) {
-      print('Error setting language: $e');
+      debugPrint('Error setting language: $e');
     }
   }
 
@@ -66,3 +65,4 @@ class LocalizationProvider extends ChangeNotifier {
     {'code': 'fr', 'name': 'French', 'nativeName': 'Français'},
   ];
 }
+

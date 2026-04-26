@@ -70,7 +70,7 @@ class _AttendanceListScreenState extends State<AttendanceListScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.person_search_rounded, size: 64, color: Colors.grey.withOpacity(0.2)),
+                  Icon(Icons.person_search_rounded, size: 64, color: Colors.grey.withValues(alpha: 0.2)),
                   const SizedBox(height: 16),
                   Text('no_students_registered'.tr(), 
                     style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16, color: Color(0xFF9E9E9E))),
@@ -107,7 +107,7 @@ class _AttendanceListScreenState extends State<AttendanceListScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4))
+          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, 4))
         ],
       ),
       child: ListTile(
@@ -130,7 +130,7 @@ class _AttendanceListScreenState extends State<AttendanceListScreen> {
         leading: Container(
           height: 48, width: 48,
           decoration: BoxDecoration(
-            color: isPresent ? tealColor.withOpacity(0.1) : Colors.red.withOpacity(0.1),
+            color: isPresent ? tealColor.withValues(alpha: 0.1) : Colors.red.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(14),
           ),
           child: Center(
@@ -163,8 +163,8 @@ class _AttendanceListScreenState extends State<AttendanceListScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: isPresent 
-                      ? (isQr ? Colors.green : Colors.orange).withOpacity(0.1)
-                      : Colors.red.withOpacity(0.1),
+                      ? (isQr ? Colors.green : Colors.orange).withValues(alpha: 0.1)
+                      : Colors.red.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(isPresent ? (isQr ? 'present_qr'.tr() : 'present_manual'.tr()) : 'absent'.tr(), 
@@ -233,3 +233,4 @@ class _AttendanceListScreenState extends State<AttendanceListScreen> {
     );
   }
 }
+

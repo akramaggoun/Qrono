@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../core/network/api_client.dart';
-import '../core/constants/api_constants.dart';
 import '../models/laboratory_model.dart';
 import '../models/group_model.dart';
 import '../models/session_model.dart';
@@ -85,21 +84,21 @@ class SessionProvider extends ChangeNotifier {
 
       if (response.statusCode == 201) {
         final body = jsonDecode(response.body);
-        print('📥 SESSION CREATED IN BACKEND: $body');
+        debugPrint('📥 SESSION CREATED IN BACKEND: $body');
         final sessionData = body['session'];
         try {
           final session = SessionModel.fromJson(sessionData);
-          print('✅ SESSION PARSED SUCCESSFULLY: ${session.courseName}');
+          debugPrint('✅ SESSION PARSED SUCCESSFULLY: ${session.courseName}');
           return session;
         } catch (e) {
-          print('❌ ERROR PARSING SESSION MODEL: $e');
+          debugPrint('❌ ERROR PARSING SESSION MODEL: $e');
           _errorMessage = "Erreur de formatage des données.";
           return null;
         }
       } else {
         final errorBody = jsonDecode(response.body);
         _errorMessage = errorBody['message'] ?? "Erreur lors de la création de la session.";
-        print('❌ SERVER REJECTED SESSION: $_errorMessage');
+        debugPrint('❌ SERVER REJECTED SESSION: $_errorMessage');
       }
     } catch (e) {
       _errorMessage = "Une erreur est survenue.";
@@ -118,3 +117,4 @@ class SessionProvider extends ChangeNotifier {
     }
   }
 }
+

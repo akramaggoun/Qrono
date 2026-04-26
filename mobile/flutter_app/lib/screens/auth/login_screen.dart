@@ -42,13 +42,13 @@ class _LoginScreenState extends State<LoginScreen> {
     if (success && mounted) {
       final role = authProvider.userRole?.toLowerCase();
       if (role == 'student') {
-        print('🚀 NAVIGATING TO DASHBOARD (Student)');
+        debugPrint('🚀 NAVIGATING TO DASHBOARD (Student)');
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const StudentDashboard()));
       } else if (role == 'professor') {
-        print('🚀 NAVIGATING TO DASHBOARD (Professor)');
+        debugPrint('🚀 NAVIGATING TO DASHBOARD (Professor)');
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const ProfessorDashboard()));
       } else if (role == 'admin') {
-        print('🚀 NAVIGATING TO DASHBOARD (Admin)');
+        debugPrint('🚀 NAVIGATING TO DASHBOARD (Admin)');
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const AdminDashboard()));
       }
     } else if (mounted) {
@@ -112,7 +112,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         borderRadius: BorderRadius.circular(24),
                         boxShadow: [
-                          BoxShadow(color: AppColors.primaryTeal.withOpacity(0.3), blurRadius: 20, offset: const Offset(0, 8)),
+                          BoxShadow(color: AppColors.primaryTeal.withValues(alpha: 0.3), blurRadius: 20, offset: const Offset(0, 8)),
                         ],
                       ),
                       child: const Icon(Icons.qr_code_scanner_rounded, size: 44, color: Colors.white),
@@ -145,7 +145,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       borderRadius: BorderRadius.circular(12),
                       color: AppColors.primaryTeal,
                       boxShadow: [
-                        BoxShadow(color: AppColors.primaryTeal.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4)),
+                        BoxShadow(color: AppColors.primaryTeal.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 4)),
                       ],
                     ),
                     labelColor: Colors.white,
@@ -203,7 +203,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   backgroundColor: AppColors.primaryTeal,
                                   foregroundColor: Colors.white,
                                   elevation: 8,
-                                  shadowColor: AppColors.primaryTeal.withOpacity(0.4),
+                                  shadowColor: AppColors.primaryTeal.withValues(alpha: 0.4),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
                                 ),
                                 child: authProvider.isLoading
@@ -249,7 +249,7 @@ class _LoginScreenState extends State<LoginScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))
+          BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4))
         ],
       ),
       child: TextFormField(
@@ -274,3 +274,5 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
+
+

@@ -87,8 +87,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
           return RefreshIndicator(
             onRefresh: () async {
+              final notifProvider = Provider.of<NotificationProvider>(context, listen: false);
               await adminProvider.fetchStatistics();
-              await Provider.of<NotificationProvider>(context, listen: false).fetchNotifications();
+              await notifProvider.fetchNotifications();
             },
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
@@ -129,7 +130,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     final name = Provider.of<AuthProvider>(context).userName ?? 'Admin';
     return Row(
       children: [
-        CircleAvatar(radius: 28, backgroundColor: Colors.purple.withOpacity(0.1), child: const Icon(Icons.admin_panel_settings, color: Colors.purple)),
+        CircleAvatar(radius: 28, backgroundColor: Colors.purple.withValues(alpha: 0.1), child: const Icon(Icons.admin_panel_settings, color: Colors.purple)),
         const SizedBox(width: 15),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -159,7 +160,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(22),
-            boxShadow: [BoxShadow(color: AppColors.primaryTeal.withOpacity(0.3), blurRadius: 20, offset: const Offset(0, 8))],
+            boxShadow: [BoxShadow(color: AppColors.primaryTeal.withValues(alpha: 0.3), blurRadius: 20, offset: const Offset(0, 8))],
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -272,7 +273,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
           children: [
             Container(
               padding: const EdgeInsets.all(7),
-              decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+              decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
               child: Icon(icon, color: color, size: 18),
             ),
             const SizedBox(height: 10),
@@ -300,7 +301,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(color: AppColors.cardColor, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.borderColor, width: 0.5)),
       child: ListTile(
-        leading: Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(10)), child: Icon(icon, color: color, size: 24)),
+        leading: Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)), child: Icon(icon, color: color, size: 24)),
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.black87)),
         subtitle: Text(sub, style: const TextStyle(fontSize: 12, color: AppColors.grayText)),
         trailing: const Icon(Icons.arrow_forward_ios, size: 12, color: AppColors.grayText),
@@ -312,7 +313,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   Widget _buildQuickSecurityStatus(String alertsCount) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: Colors.redAccent.withOpacity(0.05), borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.redAccent.withOpacity(0.2))),
+      decoration: BoxDecoration(color: Colors.redAccent.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.redAccent.withValues(alpha: 0.2))),
       child: Row(
         children: [
           const Icon(Icons.shield_outlined, color: Colors.redAccent, size: 24),
@@ -322,7 +323,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('security_status'.tr(), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.redAccent)),
-                Text('$alertsCount ' + 'intrusion_attempts_today'.tr(), style: const TextStyle(fontSize: 12, color: Colors.redAccent)),
+                Text('$alertsCount ${'intrusion_attempts_today'.tr()}', style: const TextStyle(fontSize: 12, color: Colors.redAccent)),
               ],
             ),
           ),
@@ -347,15 +348,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
           ),
           TextButton(
             onPressed: () async {
-              Navigator.pop(ctx);
               final authProvider = Provider.of<AuthProvider>(context, listen: false);
+              final navigator = Navigator.of(context);
+              Navigator.pop(ctx);
               await authProvider.logout();
-              if (mounted) {
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (_) => const LoginScreen()),
-                  (route) => false,
-                );
-              }
+              
+              navigator.pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const LoginScreen()),
+                (route) => false,
+              );
             },
             child: Text('logout_title'.tr(), style: const TextStyle(color: Colors.redAccent)),
           ),
@@ -364,4 +365,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
   }
 }
+
+
 

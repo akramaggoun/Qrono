@@ -115,13 +115,13 @@ class _StudentStatsAdminScreenState extends State<StudentStatsAdminScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10)],
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10)],
       ),
       child: Row(
         children: [
           CircleAvatar(
             radius: 30,
-            backgroundColor: AppColors.primaryTeal.withOpacity(0.1),
+            backgroundColor: AppColors.primaryTeal.withValues(alpha: 0.1),
             child: const Icon(Icons.person, color: AppColors.primaryTeal, size: 30),
           ),
           const SizedBox(width: 20),
@@ -137,7 +137,7 @@ class _StudentStatsAdminScreenState extends State<StudentStatsAdminScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: AppColors.primaryTeal.withOpacity(0.1),
+                        color: AppColors.primaryTeal.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(student['groupName'], style: const TextStyle(color: AppColors.primaryTeal, fontSize: 11, fontWeight: FontWeight.bold)),
@@ -149,7 +149,7 @@ class _StudentStatsAdminScreenState extends State<StudentStatsAdminScreen> {
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
-                            color: _isExcluded ? Colors.red.withOpacity(0.1) : Colors.grey.withOpacity(0.1),
+                            color: _isExcluded ? Colors.red.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(color: _isExcluded ? Colors.red : Colors.grey),
                           ),
@@ -212,7 +212,7 @@ class _StudentStatsAdminScreenState extends State<StudentStatsAdminScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 8)],
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 8)],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -260,7 +260,7 @@ class _StudentStatsAdminScreenState extends State<StudentStatsAdminScreen> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: (a['method'] == 'qr' ? Colors.green : Colors.orange).withOpacity(0.1),
+                  color: (a['method'] == 'qr' ? Colors.green : Colors.orange).withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
@@ -287,3 +287,4 @@ class _StudentStatsAdminScreenState extends State<StudentStatsAdminScreen> {
     );
   }
 }
+

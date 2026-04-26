@@ -112,7 +112,7 @@ class _ProfessorDashboardState extends State<ProfessorDashboard> {
         alignment: Alignment.center,
         children: [
           Container(
-            decoration: BoxDecoration(color: Colors.grey.withOpacity(0.05), shape: BoxShape.circle),
+            decoration: BoxDecoration(color: Colors.grey.withValues(alpha: 0.05), shape: BoxShape.circle),
             child: IconButton(
               icon: const Icon(Icons.notifications_none_rounded, color: Color(0xFF1A1C1E)),
               onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationScreen())),
@@ -155,7 +155,7 @@ class _ProfessorDashboardState extends State<ProfessorDashboard> {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF1E88E5).withOpacity(0.3),
+                  color: const Color(0xFF1E88E5).withValues(alpha: 0.3),
                   blurRadius: 20,
                   offset: const Offset(0, 10),
                 )
@@ -197,7 +197,9 @@ class _ProfessorDashboardState extends State<ProfessorDashboard> {
 
   Widget _buildModernStats(List sessions) {
     num totalAttendance = 0;
-    for (var s in sessions) totalAttendance += (s.attendanceCount ?? 0);
+    for (var s in sessions) {
+      totalAttendance += (s.attendanceCount ?? 0);
+    }
     final avg = sessions.isNotEmpty ? (totalAttendance / sessions.length).toStringAsFixed(1) : '0';
 
     return Row(
@@ -219,7 +221,7 @@ class _ProfessorDashboardState extends State<ProfessorDashboard> {
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))
+            BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4))
           ],
         ),
         child: Column(
@@ -243,7 +245,7 @@ class _ProfessorDashboardState extends State<ProfessorDashboard> {
         padding: const EdgeInsets.symmetric(vertical: 40),
         child: Column(
           children: [
-            Icon(Icons.inbox_rounded, size: 64, color: Colors.grey.withOpacity(0.2)),
+            Icon(Icons.inbox_rounded, size: 64, color: Colors.grey.withValues(alpha: 0.2)),
             const SizedBox(height: 16),
             Text('empty_session_history'.tr(), 
               style: const TextStyle(color: Color(0xFF9E9E9E), fontSize: 14, fontWeight: FontWeight.w500)),
@@ -273,7 +275,7 @@ class _ProfessorDashboardState extends State<ProfessorDashboard> {
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(24),
                 boxShadow: [
-                  BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 12, offset: const Offset(0, 6))
+                  BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 12, offset: const Offset(0, 6))
                 ],
               ),
               child: Row(
@@ -281,7 +283,7 @@ class _ProfessorDashboardState extends State<ProfessorDashboard> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: (isActive ? Colors.teal : Colors.blueGrey).withOpacity(0.1),
+                      color: (isActive ? Colors.teal : Colors.blueGrey).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(16)
                     ),
                     child: Icon(Icons.school_rounded, color: isActive ? Colors.teal : Colors.blueGrey, size: 24),
@@ -330,7 +332,7 @@ class _ProfessorDashboardState extends State<ProfessorDashboard> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: (active ? Colors.green : Colors.grey).withOpacity(0.1),
+        color: (active ? Colors.green : Colors.grey).withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8)
       ),
       child: Text(active ? 'status_active'.tr() : 'status_closed'.tr(), 
@@ -351,13 +353,13 @@ class _ProfessorDashboardState extends State<ProfessorDashboard> {
             onPressed: () async {
               Navigator.pop(ctx);
               final authProvider = Provider.of<AuthProvider>(context, listen: false);
+              final navigator = Navigator.of(context);
               await authProvider.logout();
-              if (mounted) {
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (_) => const LoginScreen()),
-                  (route) => false,
-                );
-              }
+              
+              navigator.pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const LoginScreen()),
+                (route) => false,
+              );
             },
             child: Text('logout'.tr(), style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
           ),
@@ -366,3 +368,4 @@ class _ProfessorDashboardState extends State<ProfessorDashboard> {
     );
   }
 }
+

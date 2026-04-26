@@ -10,7 +10,7 @@ class NotificationService {
     try {
       return FirebaseMessaging.instance;
     } catch (e) {
-      print('⚠️ FCM instance not available (Firebase not initialized?)');
+      debugPrint('⚠️ FCM instance not available (Firebase not initialized?)');
       return null;
     }
   }
@@ -27,17 +27,19 @@ class NotificationService {
     );
 
     if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-      print('🔔 Notification Permission Granted');
+      debugPrint('🔔 Notification Permission Granted');
     } else {
-      print('🔕 Notification Permission Denied');
+      debugPrint('🔕 Notification Permission Denied');
     }
 
     // Foreground message handler
     try {
       FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-        print('📩 Foreground Message Received: ${message.notification?.title}');
+        debugPrint('📩 Foreground Message Received: ${message.notification?.title}');
       });
-    } catch (e) {}
+    } catch (e) {
+      debugPrint('Error setting up foreground message handler: $e');
+    }
   }
 
   Future<String?> getToken() async {
@@ -47,11 +49,11 @@ class NotificationService {
     try {
       String? token = await fcm.getToken();
       if (token != null) {
-        print('📱 FCM TOKEN GENERATED: $token');
+        debugPrint('📱 FCM TOKEN GENERATED: $token');
       }
       return token;
     } catch (e) {
-      print('❌ FCM Token Generation Error: $e');
+      debugPrint('❌ FCM Token Generation Error: $e');
       return null;
     }
   }

@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../core/network/api_client.dart';
-import '../core/constants/api_constants.dart';
 
 class PresenceProvider extends ChangeNotifier {
   final _apiClient = ApiClient();
@@ -137,11 +136,15 @@ class PresenceProvider extends ChangeNotifier {
         _errorMessage = "Code QR invalide.";
       } else if (response.statusCode == 400) {
         final msg = jsonDecode(response.body)['message'];
-        if (msg == "QR Code is revoked") _errorMessage = "La session est fermée.";
-        else if (msg == "QR Code expired") _errorMessage = "Le code QR a expiré.";
-        else if (msg == "Session is not active") _errorMessage = "La session n'est plus active.";
-        else _errorMessage = "Erreur de validation du QR.";
-      } else if (response.statusCode == 403) {
+        if (msg == "QR Code is revoked") {
+          _errorMessage = "La session est fermée.";
+        } else if (msg == "QR Code expired") {
+          _errorMessage = "Le code QR a expiré.";
+        } else if (msg == "Session is not active") {
+          _errorMessage = "La session n'est plus active.";
+        } else {
+          _errorMessage = "Erreur de validation du QR.";
+        }      } else if (response.statusCode == 403) {
         _errorMessage = "Cette session n'est pas destinée à votre groupe.";
       } else if (response.statusCode == 409) {
         _errorMessage = "Vous avez déjà enregistré votre présence.";
@@ -219,8 +222,9 @@ class PresenceProvider extends ChangeNotifier {
         return jsonDecode(response.body)['isExcluded'] ?? false;
       }
     } catch (e) {
-      print("Erreur check exclusion: $e");
+      debugPrint("Erreur check exclusion: $e");
     }
     return false;
   }
 }
+

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class TokenStorage {
@@ -8,21 +9,21 @@ class TokenStorage {
   static Future<void> saveToken(String token) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_keyToken, token);
-    print('💾 TOKEN SAVED: $token');
+    debugPrint('💾 TOKEN SAVED: $token');
   }
 
   static Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString(_keyToken);
-    print('🔑 TOKEN RETRIEVED: $token');
-    if (token == null) print('❌ TOKEN IS NULL!');
+    debugPrint('🔑 TOKEN RETRIEVED: $token');
+    if (token == null) debugPrint('❌ TOKEN IS NULL!');
     return token;
   }
 
   static Future<void> saveRole(String role) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_keyRole, role);
-    print('✅ Role saved: $role');
+    debugPrint('✅ Role saved: $role');
   }
 
   static Future<String?> getRole() async {

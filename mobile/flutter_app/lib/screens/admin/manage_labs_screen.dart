@@ -65,7 +65,7 @@ class _ManageLabsScreenState extends State<ManageLabsScreen> {
                 Row(children: [
                   Container(
                     padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(color: AppColors.primaryTeal.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+                    decoration: BoxDecoration(color: AppColors.primaryTeal.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
                     child: const Icon(Icons.science_outlined, color: AppColors.primaryTeal),
                   ),
                   const SizedBox(width: 12),
@@ -116,7 +116,7 @@ class _ManageLabsScreenState extends State<ManageLabsScreen> {
                 SwitchListTile(
                   value: isActive,
                   onChanged: (v) => setSheet(() => isActive = v),
-                  activeColor: AppColors.primaryTeal,
+                  activeThumbColor: AppColors.primaryTeal,
                   title: Text('room_available'.tr(), style: const TextStyle(fontWeight: FontWeight.w600)),
                   subtitle: Text(isActive ? 'accessible_for_sessions'.tr() : 'unavailable_maintenance'.tr(),
                       style: TextStyle(fontSize: 11, color: isActive ? Colors.green : Colors.redAccent)),
@@ -131,9 +131,9 @@ class _ManageLabsScreenState extends State<ManageLabsScreen> {
                       icon: Icon(isEditing ? Icons.save_outlined : Icons.add, size: 18),
                       label: Text(isEditing ? 'save'.tr() : 'add'.tr()),
                       onPressed: () async {
-                        print('🔴 BUTTON PRESSED: Add/Edit Lab');
+                        debugPrint('🔴 BUTTON PRESSED: Add/Edit Lab');
                         final isValid = formKey.currentState!.validate();
-                        print('🟡 FORM VALID: $isValid');
+                        debugPrint('🟡 FORM VALID: $isValid');
                         if (!isValid) return;
                         
                         final adminProvider = Provider.of<AdminProvider>(context, listen: false);
@@ -146,7 +146,7 @@ class _ManageLabsScreenState extends State<ManageLabsScreen> {
                           'isActive': isActive,
                         };
 
-                        print('🟠 CALLING adminProvider.addLaboratory/updateLaboratory()');
+                        debugPrint('🟠 CALLING adminProvider.addLaboratory/updateLaboratory()');
                         bool success;
                         if (isEditing) {
                           success = await adminProvider.updateLaboratory(lab.id, labData);
@@ -154,7 +154,7 @@ class _ManageLabsScreenState extends State<ManageLabsScreen> {
                           success = await adminProvider.addLaboratory(labData);
                         }
 
-                        if (!mounted) return;
+                        if (!context.mounted) return;
 
                         if (success) {
                           Navigator.pop(ctx); // ctx is from StatefulBuilder
@@ -206,10 +206,14 @@ class _ManageLabsScreenState extends State<ManageLabsScreen> {
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
             onPressed: () async {
-              final success = await Provider.of<AdminProvider>(context, listen: false).deleteLaboratory(lab.id);
-              if (success && mounted) {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              final navigator = Navigator.of(context);
+              final messenger = ScaffoldMessenger.of(context);
+              final adminProvider = Provider.of<AdminProvider>(context, listen: false);
+
+              final success = await adminProvider.deleteLaboratory(lab.id);
+              if (success) {
+                navigator.pop();
+                messenger.showSnackBar(SnackBar(
                   content: Row(children: [
                     const Icon(Icons.delete_outline, color: Colors.white, size: 18),
                     const SizedBox(width: 8),
@@ -252,8 +256,6 @@ class _ManageLabsScreenState extends State<ManageLabsScreen> {
       body: Consumer<AdminProvider>(
         builder: (context, adminProvider, child) {
           final filtered = _getFilteredLabs(adminProvider.laboratories);
-          final activeCount = adminProvider.laboratories.where((l) => l.isActive).length;
-          final labs = adminProvider.laboratories;
 
           if (adminProvider.isLoading && adminProvider.laboratories.isEmpty) {
             return const Center(child: CircularProgressIndicator());
@@ -295,7 +297,7 @@ class _ManageLabsScreenState extends State<ManageLabsScreen> {
                               duration: const Duration(milliseconds: 200),
                               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                               decoration: BoxDecoration(
-                                color: sel ? c.withOpacity(0.1) : Colors.transparent,
+                                color: sel ? c.withValues(alpha: 0.1) : Colors.transparent,
                                 borderRadius: BorderRadius.circular(20),
                                 border: Border.all(color: sel ? c : Colors.grey.shade300),
                               ),
@@ -319,7 +321,7 @@ class _ManageLabsScreenState extends State<ManageLabsScreen> {
                     : ListView.separated(
                         padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
                         itemCount: filtered.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 10),
+                        separatorBuilder: (_, _) => const SizedBox(height: 10),
                         itemBuilder: (_, i) => _buildLabCard(filtered[i]),
                       ),
               ),
@@ -336,7 +338,7 @@ class _ManageLabsScreenState extends State<ManageLabsScreen> {
       decoration: BoxDecoration(
         color: AppColors.cardColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: statusColor.withOpacity(0.2)),
+        border: Border.all(color: statusColor.withValues(alpha: 0.2)),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -346,7 +348,7 @@ class _ManageLabsScreenState extends State<ManageLabsScreen> {
               children: [
                 Container(
                   padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(color: AppColors.primaryTeal.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+                  decoration: BoxDecoration(color: AppColors.primaryTeal.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
                   child: const Icon(Icons.science_outlined, color: AppColors.primaryTeal, size: 22),
                 ),
                 const SizedBox(width: 12),
@@ -359,7 +361,7 @@ class _ManageLabsScreenState extends State<ManageLabsScreen> {
                 // IHM : badge statut  = état système visible sans action requise
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(color: statusColor.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
+                  decoration: BoxDecoration(color: statusColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
                   child: Row(mainAxisSize: MainAxisSize.min, children: [
                     Container(width: 6, height: 6, decoration: BoxDecoration(color: statusColor, shape: BoxShape.circle)),
                     const SizedBox(width: 5),
@@ -396,3 +398,7 @@ class _ManageLabsScreenState extends State<ManageLabsScreen> {
     ],
   );
 }
+
+
+
+

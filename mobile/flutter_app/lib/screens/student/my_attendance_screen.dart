@@ -50,10 +50,6 @@ class _MyAttendanceScreenState extends State<MyAttendanceScreen> {
 
           final myAttendances = provider.myAttendances;
 
-          final total = myAttendances.length;
-          final present = total; // assuming list contains only present entries
-          final rate = total > 0 ? 100 : 0; // simple mock logic for percent 
-
           return Column(
             children: [
               // Stats
@@ -62,7 +58,7 @@ class _MyAttendanceScreenState extends State<MyAttendanceScreen> {
                 margin: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [tealColor, tealColor.withOpacity(0.7)],
+                    colors: [tealColor, tealColor.withValues(alpha: 0.7)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -151,7 +147,7 @@ class _MyAttendanceScreenState extends State<MyAttendanceScreen> {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: tealColor.withOpacity(0.1),
+              color: tealColor.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(isQr ? Icons.qr_code : Icons.check_circle_outline, color: tealColor, size: 24),
@@ -184,3 +180,4 @@ class _MyAttendanceScreenState extends State<MyAttendanceScreen> {
     );
   }
 }
+

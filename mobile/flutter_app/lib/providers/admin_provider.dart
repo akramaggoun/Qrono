@@ -1,10 +1,8 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../core/network/api_client.dart';
 import '../models/user_model.dart';
-import '../models/student_model.dart';
-import '../models/professor_model.dart';
-import '../models/admin_model.dart';
 import '../models/laboratory_model.dart';
 import '../models/group_model.dart';
 import '../models/unauthorized_log_model.dart';
@@ -98,8 +96,8 @@ class AdminProvider extends ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
     try {
-      print('🌐 API CALL STARTED: POST /users');
-      print('📦 BODY: $userData');
+      debugPrint('🌐 API CALL STARTED: POST /users');
+      debugPrint('📦 BODY: $userData');
       final response = await _apiClient.post('/users', userData);
       if (response.statusCode == 201) {
         await fetchUsers();
@@ -111,7 +109,7 @@ class AdminProvider extends ChangeNotifier {
         _errorMessage = body['message'] ?? "Failed to create user (${response.statusCode})";
       }
     } catch (e) {
-      print('❌ ERROR: $e');
+      debugPrint('❌ ERROR: $e');
       _errorMessage = "Connection error: $e";
     }
     _isLoading = false;
@@ -175,8 +173,8 @@ class AdminProvider extends ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
     try {
-      print('🌐 API CALL STARTED: POST /laboratories');
-      print('📦 BODY: $labData');
+      debugPrint('🌐 API CALL STARTED: POST /laboratories');
+      debugPrint('📦 BODY: $labData');
       final response = await _apiClient.post('/laboratories', labData);
       if (response.statusCode == 201) {
         await fetchLaboratories();
@@ -188,7 +186,7 @@ class AdminProvider extends ChangeNotifier {
         _errorMessage = body['message'] ?? "Failed to create laboratory (${response.statusCode})";
       }
     } catch (e) {
-      print('❌ ERROR: $e');
+      debugPrint('❌ ERROR: $e');
       _errorMessage = "Connection error: $e";
     }
     _isLoading = false;
@@ -252,8 +250,8 @@ class AdminProvider extends ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
     try {
-      print('🌐 API CALL STARTED: POST /groups');
-      print('📦 BODY: $groupData');
+      debugPrint('🌐 API CALL STARTED: POST /groups');
+      debugPrint('📦 BODY: $groupData');
       final response = await _apiClient.post('/groups', groupData);
       if (response.statusCode == 201) {
         await fetchGroups();
@@ -265,7 +263,7 @@ class AdminProvider extends ChangeNotifier {
         _errorMessage = body['message'] ?? "Failed to create group (${response.statusCode})";
       }
     } catch (e) {
-      print('❌ ERROR: $e');
+      debugPrint('❌ ERROR: $e');
       _errorMessage = "Connection error: $e";
     }
     _isLoading = false;
@@ -305,3 +303,4 @@ class AdminProvider extends ChangeNotifier {
     return false;
   }
 }
+

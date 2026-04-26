@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../core/network/api_client.dart';
-import '../mock/schedule_mock_data.dart';
 
 class ScheduleProvider extends ChangeNotifier {
   final ApiClient _apiClient = ApiClient();
@@ -76,7 +75,7 @@ class ScheduleProvider extends ChangeNotifier {
         throw Exception('Failed to fetch laboratories from database');
       }
     } catch (e) {
-      print('Error fetching lookups from database: $e');
+      debugPrint('Error fetching lookups from database: $e');
       _professors = [];
       _groups = [];
       _labs = [];
@@ -102,7 +101,7 @@ class ScheduleProvider extends ChangeNotifier {
         throw Exception('Failed to fetch professor sessions from database');
       }
     } catch (e) {
-      print('Error fetching professor sessions: $e');
+      debugPrint('Error fetching professor sessions: $e');
       _professorSessions = [];
     } finally {
       _isLoading = false;
@@ -155,7 +154,7 @@ class ScheduleProvider extends ChangeNotifier {
         if (response.statusCode == 200 || response.statusCode == 201) {
           createdSessions.add(session);
         } else {
-          print('Failed to create session: ${response.body}');
+          debugPrint('Failed to create session: ${response.body}');
           // Continue to try creating other sessions
         }
       }
@@ -165,7 +164,7 @@ class ScheduleProvider extends ChangeNotifier {
       }
       return false;
     } catch (e) {
-      print('Error assigning schedule: $e');
+      debugPrint('Error assigning schedule: $e');
       return false;
     } finally {
       _isLoading = false;
@@ -173,3 +172,4 @@ class ScheduleProvider extends ChangeNotifier {
     }
   }
 }
+

@@ -79,7 +79,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.notifications_off_outlined, size: 80, color: AppColors.grayText.withOpacity(0.5)),
+          Icon(Icons.notifications_off_outlined, size: 80, color: AppColors.grayText.withValues(alpha: 0.5)),
           const SizedBox(height: 16),
           const Text(
             'Aucune notification pour le moment',
@@ -113,7 +113,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         color: AppColors.cardColor,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: item['isRead'] ? AppColors.borderColor : AppColors.primaryTeal.withOpacity(0.3),
+          color: item['isRead'] ? AppColors.borderColor : AppColors.primaryTeal.withValues(alpha: 0.3),
           width: 0.5,
         ),
       ),
@@ -122,7 +122,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         leading: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: iconColor.withOpacity(0.1),
+            color: iconColor.withValues(alpha: 0.1),
             shape: BoxShape.circle,
           ),
           child: Icon(iconData, color: iconColor, size: 24),
@@ -170,3 +170,4 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     );
   }
 }
+
