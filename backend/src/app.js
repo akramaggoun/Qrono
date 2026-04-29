@@ -69,6 +69,7 @@ app.use('/api/sessions', require('./routes/session.routes'));
 app.use('/api/presences', require('./routes/presence.routes'));
 
 app.use('/api/notifications', require('./routes/notification.routes'));
+app.use('/api/schedules', require('./routes/schedule.routes'));
 
 // Health check including real PostgreSQL connectivity (Prisma)
 app.get('/api/health', async (req, res) => {

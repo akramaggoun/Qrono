@@ -1,10 +1,10 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../mock/schedule_mock_data.dart';
 import '../../../../core/widgets/schedule_grid.dart';
 import '../../../../providers/schedule_provider.dart';
-import 'package:easy_localization/easy_localization.dart';
 
 class CreatePlanningsScreen extends StatefulWidget {
   const CreatePlanningsScreen({super.key});
@@ -20,12 +20,8 @@ class _CreatePlanningsScreenState extends State<CreatePlanningsScreen> {
   @override
   void initState() {
     super.initState();
-    // Fetch professors, groups, and labs from database
     Future.microtask(
-      () {
-        if (!mounted) return;
-        context.read<ScheduleProvider>().fetchLookups();
-      },
+      () => context.read<ScheduleProvider>().fetchLookups(),
     );
   }
 
@@ -36,7 +32,7 @@ class _CreatePlanningsScreenState extends State<CreatePlanningsScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: Text('create_plannings_title_2'.tr(), style: const TextStyle(color: Colors.black87)),
+        title: Text('create_plannings'.tr(), style: const TextStyle(color: Colors.black87)),
         backgroundColor: Colors.white,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.black87),
@@ -95,16 +91,18 @@ class _CreatePlanningsScreenState extends State<CreatePlanningsScreen> {
                     borderRadius: BorderRadius.circular(10),
                     color: AppColors.cardColor,
                   ),
-                  child: Text(
-                    'no_professors_available'.tr(),
-                    style: const TextStyle(color: AppColors.grayText, fontSize: 14),
+                  child: const Text(
+                    'No professors available. Please check your database connection.',
+                    style: TextStyle(color: AppColors.grayText, fontSize: 14),
                     textAlign: TextAlign.center,
                   ),
                 )
-              : DropdownButtonFormField<String>(
-                  initialValue: _selectedProfessorId,
+              : DropdownButtonFormField<Map<String, dynamic>>(
+                  initialValue: provider.professors.any((p) => p['id'] == _selectedProfessorId) 
+                    ? provider.professors.firstWhere((p) => p['id'] == _selectedProfessorId)
+                    : null,
                   decoration: InputDecoration(
-                    labelText: 'select_professor_placeholder'.tr(),
+                    labelText: 'professor'.tr(),
                     labelStyle: const TextStyle(color: AppColors.primaryTeal),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
@@ -118,17 +116,76 @@ class _CreatePlanningsScreenState extends State<CreatePlanningsScreen> {
                     fillColor: AppColors.cardColor,
                   ),
                   items: provider.professors.map((prof) {
-                    return DropdownMenuItem<String>(
-                      value: prof['id'],
+                    return DropdownMenuItem<Map<String, dynamic>>(
+                      value: prof,
                       child: Text('${prof['name']} (${prof['department']})',
                           style: const TextStyle(fontSize: 14)),
                     );
                   }).toList(),
-                  onChanged: (value) {
+                  onChanged: (value) async {
+                    if (value == null) return;
                     setState(() {
-                      _selectedProfessorId = value;
+                      _selectedProfessorId = value['id'];
                       _currentSessions = [];
                     });
+                    
+                    // The Schedule and Session records in DB use the PROFESSOR PROFILE ID, 
+                    // not the USER ID.
+                    final profileId = value['professorProfileId'];
+                    if (profileId != null) {
+                      await provider.fetchProfessorSchedule(profileId);
+                      
+                      final List<Map<String, dynamic>> mappedSessions = [];
+                      for (var s in provider.professorSessions) {
+                        try {
+                          // Handle both ISO strings from DB and potential mock data structures
+                          final DateTime startTime = s['startTime'] is String 
+                              ? DateTime.parse(s['startTime']).toLocal() 
+                              : s['startTime'];
+                          final DateTime endTime = s['endTime'] is String 
+                              ? DateTime.parse(s['endTime']).toLocal() 
+                              : s['endTime'];
+                              
+                          // Format to HH:mm string for comparison with ScheduleMockData.timeSlots
+                          final startStr = "${startTime.hour.toString().padLeft(2, '0')}:${startTime.minute.toString().padLeft(2, '0')}";
+                          final endStr = "${endTime.hour.toString().padLeft(2, '0')}:${endTime.minute.toString().padLeft(2, '0')}";
+                          final timeRange = "$startStr - $endStr";
+                          
+                          int slotIdx = ScheduleMockData.timeSlots.indexOf(timeRange);
+                          if (slotIdx == -1) {
+                            // Try looser match if exact range doesn't exist
+                            slotIdx = ScheduleMockData.timeSlots.indexWhere((slot) => slot.startsWith(startStr));
+                          }
+                          
+                          if (slotIdx == -1) {
+                             debugPrint("No matching slot for: $timeRange");
+                             continue;
+                          }
+                          
+                          // Convert DateTime weekday (1=Mon, 7=Sun) to our Mock index (0=Sun, 1=Mon...)
+                          int dayIdx = startTime.weekday % 7; 
+                          
+                          mappedSessions.add({
+                            'id': s['id'],
+                            'course': s['courseName'] ?? s['course'] ?? 'Unknown',
+                            'groupId': s['groupId'],
+                            'groupName': s['group']?['name'] ?? s['groupName'] ?? 'Group',
+                            'labId': s['labId'],
+                            'labName': s['lab']?['name'] ?? s['labName'] ?? 'Lab',
+                            'day': ScheduleMockData.weekDays[dayIdx],
+                            'startTime': startStr,
+                            'endTime': endStr,
+                            'dayIndex': dayIdx,
+                            'slotIndex': slotIdx,
+                          });
+                        } catch (e) {
+                          debugPrint('Error mapping session to grid: $e');
+                        }
+                      }
+                      setState(() {
+                        _currentSessions = mappedSessions;
+                      });
+                    }
                   },
                 ),
     );
@@ -144,30 +201,31 @@ class _CreatePlanningsScreenState extends State<CreatePlanningsScreen> {
           onPressed: canAssign ? () => _confirmAssignment(provider) : null,
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.primaryTeal,
-            disabledBackgroundColor: AppColors.grayText.withValues(alpha: 0.3),
+            disabledBackgroundColor: AppColors.grayText.withOpacity(0.3),
             padding: const EdgeInsets.symmetric(vertical: 16),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             elevation: 0,
           ),
-          child: Text('assign_to_professor'.tr(),
-              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+          child: Text('assign_schedule'.tr(),
+              style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
         ),
       ),
     );
   }
 
   void _confirmAssignment(ScheduleProvider provider) {
+    if (_selectedProfessorId == null) return;
     final prof = provider.professors.firstWhere((p) => p['id'] == _selectedProfessorId);
     
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('assign_schedule_prompt'.tr()),
-        content: Text('assign_schedule_desc'.tr(args: [prof['name']])),
+        title: Text('assign_schedule'.tr()),
+        content: Text('Assign this schedule to ${prof['name']}? They will see it immediately on their account.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.grayText)),
+            child: Text('cancel'.tr(), style: const TextStyle(color: AppColors.grayText)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -178,23 +236,21 @@ class _CreatePlanningsScreenState extends State<CreatePlanningsScreen> {
             onPressed: () async {
               Navigator.pop(ctx);
               
-              // Show loading indicator
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('saving_schedule'.tr()),
+                const SnackBar(
+                  content: Text('Saving schedule to database...'),
                   backgroundColor: AppColors.primaryTeal,
-                  duration: const Duration(seconds: 2),
+                  duration: Duration(seconds: 2),
                 ),
               );
 
-              // Assign to database via provider
               final success = await provider.assignSchedule(_selectedProfessorId!, _currentSessions);
               
               if (success) {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('schedule_assigned_success'.tr(args: [prof['name']])),
+                      content: Text('Schedule assigned successfully to ${prof['name']}'),
                       backgroundColor: AppColors.primaryTeal,
                       behavior: SnackBarBehavior.floating,
                     ),
@@ -208,8 +264,8 @@ class _CreatePlanningsScreenState extends State<CreatePlanningsScreen> {
               } else {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('failed_to_save_schedule'.tr()),
+                    const SnackBar(
+                      content: Text('Failed to save schedule. Please try again.'),
                       backgroundColor: Colors.red,
                       behavior: SnackBarBehavior.floating,
                     ),
@@ -217,7 +273,7 @@ class _CreatePlanningsScreenState extends State<CreatePlanningsScreen> {
                 }
               }
             },
-            child: Text('confirm'.tr(), style: const TextStyle(color: Colors.white)),
+            child: const Text('Confirm', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -358,12 +414,11 @@ class _SessionFormSheetState extends State<SessionFormSheet> {
             ),
             const SizedBox(height: 10),
             
-            // Read-only Time Context
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
               decoration: BoxDecoration(
-                color: AppColors.primaryTeal.withValues(alpha: 0.1),
+                color: AppColors.primaryTeal.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
@@ -374,7 +429,6 @@ class _SessionFormSheetState extends State<SessionFormSheet> {
             ),
             const SizedBox(height: 20),
 
-            // Form Fields
             TextFormField(
               controller: _courseController,
               decoration: InputDecoration(
@@ -385,42 +439,43 @@ class _SessionFormSheetState extends State<SessionFormSheet> {
                   borderSide: const BorderSide(color: AppColors.primaryTeal),
                 ),
               ),
-                validator: (v) => (v == null || v.isEmpty) ? 'required_field'.tr() : null,
+              validator: (v) => (v == null || v.isEmpty) ? 'Required' : null,
             ),
             const SizedBox(height: 16),
             
             DropdownButtonFormField<String>(
               initialValue: _selectedGroupId,
-              decoration: InputDecoration(                labelText: 'associated_group'.tr(),
+              decoration: InputDecoration(
+                labelText: 'select_group'.tr(),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
               ),
               items: widget.groups.isEmpty
                   ? [
-                      DropdownMenuItem(
+                      const DropdownMenuItem(
                         value: null,
-                        child: Text('no_groups_available'.tr(), style: const TextStyle(color: AppColors.grayText)),
+                        child: Text('No groups available', style: TextStyle(color: AppColors.grayText)),
                       )
                     ]
                   : widget.groups.map((g) => DropdownMenuItem(
                         value: g['id'] as String,
-                        child: Text('${g['name']}${g['yearLevel'] != null ? ' (Year ${g["yearLevel"]})' : ''}'),
+                        child: Text('${g['name']}${g['yearLevel'] != null ? " (Year ${g['yearLevel']})" : ""}'),
                       )).toList(),
               onChanged: widget.groups.isEmpty ? null : (v) => setState(() => _selectedGroupId = v),
-              validator: (v) => v == null ? 'required_field'.tr() : null,
+              validator: (v) => v == null ? 'Required' : null,
             ),
             const SizedBox(height: 16),
 
             DropdownButtonFormField<String>(
               initialValue: _selectedLabId,
               decoration: InputDecoration(
-                labelText: 'associated_lab'.tr(),
+                labelText: 'select_lab'.tr(),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
               ),
               items: widget.labs.isEmpty
                   ? [
-                      DropdownMenuItem(
+                      const DropdownMenuItem(
                         value: null,
-                        child: Text('no_labs_available'.tr(), style: const TextStyle(color: AppColors.grayText)),
+                        child: Text('No labs available', style: TextStyle(color: AppColors.grayText)),
                       )
                     ]
                   : widget.labs.map((l) => DropdownMenuItem(
@@ -428,11 +483,10 @@ class _SessionFormSheetState extends State<SessionFormSheet> {
                         child: Text(l['name'] ?? 'Unknown Lab'),
                       )).toList(),
               onChanged: widget.labs.isEmpty ? null : (v) => setState(() => _selectedLabId = v),
-              validator: (v) => v == null ? 'required_field'.tr() : null,
+              validator: (v) => v == null ? 'Required' : null,
             ),
             const SizedBox(height: 30),
 
-            // Actions
             Row(
               children: [
                 Expanded(
@@ -443,7 +497,7 @@ class _SessionFormSheetState extends State<SessionFormSheet> {
                       side: const BorderSide(color: AppColors.grayText),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
-                    child: Text('cancel'.tr(), style: const TextStyle(color: AppColors.grayText, fontSize: 16)),
+                    child: const Text('Cancel', style: TextStyle(color: AppColors.grayText, fontSize: 16)),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -456,7 +510,7 @@ class _SessionFormSheetState extends State<SessionFormSheet> {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       elevation: 0,
                     ),
-                    child: Text(widget.isEdit ? 'update_session'.tr() : 'add_session_btn'.tr(), style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                    child: Text(widget.isEdit ? 'update'.tr() : 'add'.tr(), style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
                   ),
                 ),
               ],
@@ -485,6 +539,7 @@ class _SessionFormSheetState extends State<SessionFormSheet> {
         'endTime': times[1],
         'dayIndex': widget.dayIndex,
         'slotIndex': widget.slotIndex,
+        'dayOfWeek': widget.dayIndex, // 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
       };
 
       widget.onSave(sessionData);
@@ -492,5 +547,3 @@ class _SessionFormSheetState extends State<SessionFormSheet> {
     }
   }
 }
-
-

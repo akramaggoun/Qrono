@@ -209,57 +209,62 @@ class _StudentDashboardState extends State<StudentDashboard> {
   Widget _buildAttendanceIndicator(int present, int total) {
     double progress = total > 0 ? (present / total) : 0.0;
     
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 12, offset: const Offset(0, 6))
-        ],
-      ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('attendance_overview'.tr(), 
-                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Stack(
-            children: [
-              Container(height: 12, decoration: BoxDecoration(color: Colors.grey.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(6))),
-              AnimatedContainer(
-                duration: const Duration(seconds: 1),
-                height: 12, width: MediaQuery.of(context).size.width * 0.7 * progress,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(colors: [AppColors.primaryTeal, Color(0xFF4DB6AC)]),
-                  borderRadius: BorderRadius.circular(6),
-                  boxShadow: [BoxShadow(color: Colors.teal.withValues(alpha: 0.2), blurRadius: 6, offset: const Offset(0, 3))]
+    return InkWell(
+      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MyAttendanceScreen())),
+      borderRadius: BorderRadius.circular(24),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 12, offset: const Offset(0, 6))
+          ],
+        ),
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('attendance_overview'.tr(), 
+                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+                const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.grayText),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Stack(
+              children: [
+                Container(height: 12, decoration: BoxDecoration(color: Colors.grey.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(6))),
+                AnimatedContainer(
+                  duration: const Duration(seconds: 1),
+                  height: 12, width: (MediaQuery.of(context).size.width - 80) * progress,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(colors: [AppColors.primaryTeal, Color(0xFF4DB6AC)]),
+                    borderRadius: BorderRadius.circular(6),
+                    boxShadow: [BoxShadow(color: Colors.teal.withValues(alpha: 0.2), blurRadius: 6, offset: const Offset(0, 3))]
+                  ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('$present / $total ${'sessions_done'.tr()}', 
-                    style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: Color(0xFF1A1C1E))),
-                  Text('total_present_semester'.tr(), 
-                    style: TextStyle(fontSize: 11, color: Color(0xFF9E9E9E), fontWeight: FontWeight.w500)),
-                ],
-              ),
-              Text('${(progress * 100).round()}%', 
-                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: AppColors.primaryTeal)),
-            ],
-          ),
-        ],
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('$present / $total ${'sessions_done'.tr()}', 
+                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: Color(0xFF1A1C1E))),
+                    Text('total_present_semester'.tr(), 
+                      style: const TextStyle(fontSize: 11, color: Color(0xFF9E9E9E), fontWeight: FontWeight.w500)),
+                  ],
+                ),
+                Text('${(progress * 100).round()}%', 
+                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: AppColors.primaryTeal)),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

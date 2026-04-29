@@ -141,7 +141,8 @@ async function main() {
   }
   console.log('✅ Laboratories created (4)');
 
-  // 7. CREATE SESSIONS
+  // 7. SESSIONS & ATTENDANCE (Disabled - all stats start at 0)
+  /*
   const today = new Date();
   const yesterday = new Date(today);
   yesterday.setDate(yesterday.getDate() - 1);
@@ -208,11 +209,13 @@ async function main() {
         studentId: students[a.student].id,
         sessionId: sessions[a.session].id,
         method: a.method,
-        checkInAt: new Date(),
+        status: 'present'
       },
     });
   }
   console.log('✅ Attendance records created (4)');
+  */
+  console.log('ℹ️ Session and Attendance creation bypassed for clean initial state.');
 
   console.log('🎉 Database seeded successfully!');
 }

@@ -4,7 +4,8 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../mock/schedule_mock_data.dart';
 import '../../../../core/widgets/schedule_grid.dart';
-import 'qr_code_display_screen.dart';
+import '../../models/session_model.dart';
+import 'show_qr_screen.dart';
 import 'package:easy_localization/easy_localization.dart';
 
 class WeeklyScheduleScreen extends StatefulWidget {
@@ -77,9 +78,12 @@ class _WeeklyScheduleScreenState extends State<WeeklyScheduleScreen> {
               'groupName': session['group']['name'],
               'labId': session['lab']['id'],
               'labName': session['lab']['name'],
+              'qr_token': session['qr_code']?['token'] ?? "",
               'day': dayIndex != -1 ? ScheduleMockData.weekDays[dayIndex] : 'Unknown',
               'startTime': '${startTime.hour.toString().padLeft(2, '0')}:${startTime.minute.toString().padLeft(2, '0')}',
               'endTime': '${endTime.hour.toString().padLeft(2, '0')}:${endTime.minute.toString().padLeft(2, '0')}',
+              'fullStartTime': startTime,
+              'fullEndTime': endTime,
               'dayIndex': dayIndex,
               'slotIndex': slotIndex,
             };
@@ -268,10 +272,27 @@ class _WeeklyScheduleScreenState extends State<WeeklyScheduleScreen> {
                     child: ElevatedButton(
                       onPressed: () {
                         Navigator.pop(ctx);
+                        
+                        // Map the raw session data to SessionModel
+                        final sessionData = _mySessions.firstWhere((s) => s['id'] == session['id']);
+                        
+                        final sessionModel = SessionModel(
+                          id: sessionData['id'],
+                          courseName: sessionData['course'] ?? '',
+                          labId: sessionData['labId']?.toString() ?? '',
+                          groupId: sessionData['groupId']?.toString() ?? '',
+                          professorId: widget.professorId,
+                          qrToken: sessionData['qr_token'],
+                          startTime: sessionData['fullStartTime'],
+                          endTime: sessionData['fullEndTime'],
+                          isRecurring: false,
+                          status: "ACTIVE",
+                        );
+
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => QrCodeDisplayScreen(session: session),
+                            builder: (context) => ShowQrScreen(session: sessionModel),
                           ),
                         );
                       },

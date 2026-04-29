@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/session_provider.dart';
 import '../../models/session_model.dart';
@@ -14,7 +14,6 @@ class MySessionsScreen extends StatefulWidget {
 }
 
 class _MySessionsScreenState extends State<MySessionsScreen> {
-  
   @override
   void initState() {
     super.initState();
@@ -23,14 +22,26 @@ class _MySessionsScreenState extends State<MySessionsScreen> {
     });
   }
 
-  String _formatTime(String? isoString) {
-    if (isoString == null) return '--:--';
-    try {
-      final dt = DateTime.parse(isoString).toLocal();
-      return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
-    } catch (_) {
-      return isoString;
+  String _formatTime(DateTime dateTime) {
+    return '${dateTime.toLocal().hour.toString().padLeft(2, '0')}:${dateTime.toLocal().minute.toString().padLeft(2, '0')}';
+  }
+
+  bool _isSessionClosed(SessionModel session) {
+    // 🛑 MASTER OVERRIDE: Calculate closure status manually
+    final now = DateTime.now();
+    final localEnd = session.endTime.toLocal();
+    
+    // Safety check: ensure we aren't comparing with a zeroed-out date
+    if (session.endTime.year < 2020) return false;
+
+    // Nuclear check: If current time is AFTER session end time, it is CLOSED.
+    if (now.isAfter(localEnd)) {
+      return true;
     }
+    
+    // Status backup
+    final status = (session.status ?? '').toUpperCase();
+    return status == 'CLOSED' || status == 'COMPLETED';
   }
 
   @override
@@ -45,6 +56,12 @@ class _MySessionsScreenState extends State<MySessionsScreen> {
         title: Text('sessions_history'.tr(), style: const TextStyle(color: Colors.white)),
         backgroundColor: cardColor,
         iconTheme: const IconThemeData(color: tealColor),
+        actions: [
+            IconButton(
+                icon: const Icon(Icons.refresh),
+                onPressed: () => context.read<SessionProvider>().fetchMySessions(),
+            )
+        ],
       ),
       body: Consumer<SessionProvider>(
         builder: (context, provider, child) {
@@ -59,8 +76,8 @@ class _MySessionsScreenState extends State<MySessionsScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.event_busy, color: Colors.white54, size: 60),
-                  SizedBox(height: 16),
+                  const Icon(Icons.event_busy, color: Colors.white54, size: 60),
+                  const SizedBox(height: 16),
                   Text('no_session_created'.tr(), style: const TextStyle(color: Colors.white70, fontSize: 16)),
                 ],
               ),
@@ -69,13 +86,9 @@ class _MySessionsScreenState extends State<MySessionsScreen> {
 
           return ListView.builder(
             padding: const EdgeInsets.all(16),
-            itemCount: provider.sessions.length,
+            itemCount: sessions.length,
             itemBuilder: (context, index) {
-              if (index >= provider.sessions.length) {
-                debugPrint('⚠️ Index $index out of bounds for sessions length ${provider.sessions.length}');
-                return const SizedBox.shrink();
-              }
-              return _buildSessionCard(provider.sessions[index], cardColor, tealColor, context);
+              return _buildSessionCard(sessions[index], cardColor, tealColor, context);
             },
           );
         },
@@ -84,25 +97,25 @@ class _MySessionsScreenState extends State<MySessionsScreen> {
   }
 
   Widget _buildSessionCard(SessionModel session, Color cardColor, Color tealColor, BuildContext context) {
-    final isClosed = DateTime.now().isAfter(session.endTime);
+    // 🛑 NUCLEAR OVERRIDE: Force status based on time
+    final isClosed = _isSessionClosed(session);
     final statusText = isClosed ? 'status_closed'.tr() : 'status_active'.tr();
     final statusColor = isClosed ? Colors.red.shade700 : Colors.green;
-    
-    final startTime = _formatTime(session.startTime.toIso8601String());
-    final endTime = _formatTime(session.endTime.toIso8601String());
-    final groupName = session.groupName ?? session.groupId; 
-    final labName = session.labName ?? session.labId;
+
+    final startTimeStr = _formatTime(session.startTime);
+    final endTimeStr = _formatTime(session.endTime);
+    final groupName = session.groupName ?? 'N/A';
+    final labName = session.labName ?? 'N/A';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white12, width: 0.5),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 10, offset: const Offset(0, 4))
-        ]
-      ),
+          color: cardColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.white12, width: 0.5),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 10, offset: const Offset(0, 4))
+          ]),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
         onTap: () {
@@ -110,7 +123,7 @@ class _MySessionsScreenState extends State<MySessionsScreen> {
             context,
             MaterialPageRoute(
               builder: (context) => AttendanceListScreen(
-                courseName: session.courseName, // Fixed from hardcoded 'Session'
+                courseName: session.courseName,
                 sessionId: session.id ?? '',
               ),
             ),
@@ -135,7 +148,7 @@ class _MySessionsScreenState extends State<MySessionsScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: statusColor.withValues(alpha: 0.1),
+                      color: statusColor.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
@@ -148,39 +161,39 @@ class _MySessionsScreenState extends State<MySessionsScreen> {
               const SizedBox(height: 10),
               _buildInfoRow(Icons.science_outlined, '${'lab_prefix'.tr()}$labName'),
               _buildInfoRow(Icons.groups_outlined, '${'group_prefix'.tr()}$groupName'),
-              if (session.attendanceCount != null)
-                _buildInfoRow(Icons.people_outline, '${'attendance_prefix'.tr()}${session.attendanceCount}${'students_suffix'.tr()}'),
-              const Divider(height: 30, color: Colors.white12),
+              _buildInfoRow(Icons.people_alt_outlined, '${'attendance_prefix'.tr()}${session.attendanceCount ?? 0}${'students_label'.tr()}'),
+              const Divider(color: Colors.white10, height: 30),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('time_prefix'.tr(), style: const TextStyle(color: Colors.white70, fontSize: 13)),
-                  Text('$startTime - $endTime', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Colors.white)),
+                  Text('time_label'.tr(), style: const TextStyle(color: Colors.white38, fontSize: 13)),
+                  Text('$startTimeStr - $endTimeStr', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
                 ],
               ),
-              if (!isClosed && (session.qrToken != null || true)) ...[
-                const SizedBox(height: 16),
+              if (!isClosed) ...[
+                const SizedBox(height: 20),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: tealColor,
                       foregroundColor: Colors.white,
-                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      padding: const EdgeInsets.symmetric(vertical: 12)
                     ),
-                    icon: const Icon(Icons.qr_code_2),
-                    label: Text('show_qr_scanner'.tr(), style: const TextStyle(fontWeight: FontWeight.bold)),
                     onPressed: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => ShowQrScreen(session: session)),
+                        MaterialPageRoute(
+                          builder: (context) => ShowQrScreen(session: session),
+                        ),
                       );
                     },
+                    icon: const Icon(Icons.qr_code_scanner),
+                    label: Text('show_qr_code'.tr()),
                   ),
-                )
-              ]
+                ),
+              ],
             ],
           ),
         ),
@@ -201,4 +214,3 @@ class _MySessionsScreenState extends State<MySessionsScreen> {
     );
   }
 }
-

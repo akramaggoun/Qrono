@@ -57,22 +57,25 @@ class NotificationProvider extends ChangeNotifier {
   }
 
   void _playSound(String type) async {
-    String soundFile;
-    switch (type.toLowerCase()) {
-      case 'warning':
-      case 'error':
-      case 'critical':
-        soundFile = 'sounds/warning.mp3';
-        break;
-      case 'success':
-        soundFile = 'sounds/success.mp3';
-        break;
-      case 'info':
-      default:
-        soundFile = 'sounds/info.mp3';
-    }
-
     try {
+      await _audioPlayer.stop(); // Stop any currently playing audio properly
+      String soundFile;
+      switch (type.toUpperCase()) {
+        case 'WARNING':
+        case 'ERROR':
+        case 'CRITICAL':
+        case 'UNAUTHORIZED_ACCESS':
+          soundFile = 'sounds/warning.mp3';
+          break;
+        case 'SUCCESS':
+        case 'ATTENDANCE_RECORDED':
+          soundFile = 'sounds/success.mp3';
+          break;
+        case 'INFO':
+        case 'SESSION_STARTED':
+        default:
+          soundFile = 'sounds/info.mp3';
+      }
       await _audioPlayer.play(AssetSource(soundFile));
     } catch (e) {
       debugPrint('⚠️ Could not play notification sound: $e');
@@ -83,17 +86,19 @@ class NotificationProvider extends ChangeNotifier {
     Color bgColor;
     IconData icon;
 
-    switch (notification.type.toLowerCase()) {
-      case 'warning':
-      case 'critical':
-        bgColor = Colors.orange.shade800;
+    switch (notification.type.toUpperCase()) {
+      case 'WARNING':
+      case 'CRITICAL':
+      case 'UNAUTHORIZED_ACCESS':
+        bgColor = Colors.red.shade800; // Changed from orange to red
         icon = Icons.warning_amber_rounded;
         break;
-      case 'error':
-        bgColor = Colors.red.shade800;
+      case 'ERROR':
+        bgColor = Colors.red.shade900;
         icon = Icons.error_outline_rounded;
         break;
-      case 'success':
+      case 'SUCCESS':
+      case 'ATTENDANCE_RECORDED':
         bgColor = Colors.green.shade800;
         icon = Icons.check_circle_outline_rounded;
         break;
@@ -104,11 +109,11 @@ class NotificationProvider extends ChangeNotifier {
 
     showSimpleNotification(
       Text(
-        notification.title,
+        notification.localizedTitle,
         style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
       ),
       subtitle: Text(
-        notification.body,
+        notification.localizedBody,
         style: const TextStyle(color: Colors.white70),
       ),
       leading: Icon(icon, color: Colors.white, size: 30),

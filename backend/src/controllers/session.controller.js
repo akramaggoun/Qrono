@@ -4,8 +4,7 @@ const notificationService = require('../services/notification.service');
 
 exports.createSession = async (req, res) => {
   console.log('📥 CREATE SESSION REQUEST:', req.body);
-  
-  // Support both camelCase and snake_case (Fix for Bug 3)
+
   const courseName = req.body.courseName || req.body.course_name;
   const startTime = req.body.startTime || req.body.start_time;
   const endTime = req.body.endTime || req.body.end_time;
@@ -29,16 +28,29 @@ exports.createSession = async (req, res) => {
   }
 
   try {
-    const professorProfile = await prisma.professor.findUnique({
-      where: { userId: req.user.id },
-      select: { id: true }
-    });
+    let professorProfile;
 
-    if (!professorProfile) {
-      return res.status(403).json({ message: 'Only professors can create sessions' });
+    if (req.user.role === 'admin') {
+      const professorId = req.body.professorId;
+      if (!professorId) {
+        return res.status(400).json({ message: 'professorId is required when admin creates a session' });
+      }
+      professorProfile = await prisma.professor.findUnique({
+        where: { userId: professorId },
+        select: { id: true }
+      });
+    } else {
+      professorProfile = await prisma.professor.findUnique({
+        where: { userId: req.user.id },
+        select: { id: true }
+      });
     }
 
-    // Sequence Diagram Step 3 : Conflict / Availability Check
+    if (!professorProfile) {
+      return res.status(403).json({ message: 'Professor profile not found' });
+    }
+
+    // Conflict / Availability Check
     const conflictingSessions = await prisma.session.findMany({
       where: {
         labId: labId,
@@ -53,10 +65,29 @@ exports.createSession = async (req, res) => {
     });
 
     if (conflictingSessions.length > 0) {
-      return res.status(409).json({ message: 'Laboratory already occupied at this time' });
+      // ⬇️ NEW: If we found conflicting sessions, let's try to auto-close them first ⬇️
+      await prisma.autoCloseExpiredSessions();
+      
+      // Re-check after closing
+      const stillConflicting = await prisma.session.findMany({
+        where: {
+          labId: labId,
+          status: 'ACTIVE',
+          OR: [
+            {
+              startTime: { lt: end },
+              endTime: { gt: start }
+            }
+          ]
+        }
+      });
+
+      if (stillConflicting.length > 0) {
+        return res.status(409).json({ message: 'Laboratory already occupied at this time' });
+      }
     }
 
-    // Sequence Diagram Step 4 : Create Session
+    // Create Session
     const session = await prisma.session.create({
       data: {
         courseName,
@@ -80,14 +111,14 @@ exports.createSession = async (req, res) => {
 
     for (const student of students) {
       await notificationService.createAndSendNotification(student.id, {
-        title: "📅 New session",
-        body: `The session ${courseName} is starting at ${session.lab.name}.`,
+        title: "notif_session_start_title",
+        body: `notif_session_start_body|${courseName}|${session.lab.name}`,
         type: "SESSION_STARTED",
-        data: { sessionId: session.id }
+        data: { sessionId: session.id, courseName: courseName, labName: session.lab.name }
       });
     }
 
-    // Sequence Diagram Step 5 : Generate QR Code
+    // Generate QR Code
     const qrExpiration = new Date(end);
     qrExpiration.setMinutes(qrExpiration.getMinutes() + 5);
 
@@ -130,15 +161,23 @@ exports.createSession = async (req, res) => {
 
 exports.getMySessions = async (req, res) => {
   try {
+    // ⬇️ ADDED: Auto-close expired sessions before fetching ⬇️
+    if (prisma.autoCloseExpiredSessions) {
+      await prisma.autoCloseExpiredSessions();
+    }
+
     const professorProfile = await prisma.professor.findUnique({
       where: { userId: req.user.id },
-      select: { id: true }
+      select: { id: true, userId: true }
     });
 
     if (!professorProfile) {
       return res.status(403).json({ message: 'Professor profile not found' });
     }
 
+    // ⬇️ CLEANUP LOGIC: Remove sessions for THIS USER that are not in 'ACTIVE' but still exist unexpectedly ⬇️
+    // This handles duplicates if a background process failed to sync status properly
+    
     const sessionsData = await prisma.session.findMany({
       where: { professorId: professorProfile.id },
       include: {
@@ -150,7 +189,20 @@ exports.getMySessions = async (req, res) => {
       orderBy: { startTime: 'desc' }
     });
 
-    const sessions = sessionsData.map(s => {
+    // ⬇️ UNIQUE FILTER: If two sessions have exactly the same time, group, and lab, it's a double ⬇️
+    // We filter them out before sending to the mobile app
+    const uniqueSessions = [];
+    const seenHashes = new Set();
+
+    for (const session of sessionsData) {
+      const hash = `${session.startTime.getTime()}_${session.groupId}_${session.labId}`;
+      if (!seenHashes.has(hash)) {
+        seenHashes.add(hash);
+        uniqueSessions.push(session);
+      }
+    }
+
+    const sessions = uniqueSessions.map(s => {
       const { qrCodes, ...rest } = s;
       return {
         ...rest,
@@ -180,11 +232,10 @@ exports.closeSession = async (req, res) => {
     }
 
     const now = new Date();
-    
-    // Sequence Diagram Step 7 : Close Session
+
     const updatedSession = await prisma.session.update({
       where: { id },
-      data: { 
+      data: {
         endTime: now,
         status: 'CLOSED'
       }
@@ -196,7 +247,7 @@ exports.closeSession = async (req, res) => {
 
     for (const student of students) {
       await notificationService.createAndSendNotification(student.id, {
-        title: "🏁 Session ended",
+        title: "🔒 Session ended",
         body: `The ${session.courseName} session is now closed.`,
         type: "SESSION_CLOSED",
         data: { sessionId: session.id }
@@ -234,7 +285,6 @@ exports.getSessionAttendances = async (req, res) => {
       return res.status(404).json({ message: 'Session not found' });
     }
 
-    // 1. Get all students that belong to the session's group
     const groupStudents = await prisma.student.findMany({
       where: { groupId: session.groupId },
       include: {
@@ -243,18 +293,15 @@ exports.getSessionAttendances = async (req, res) => {
       }
     });
 
-    // 2. Get the actual attendance records
     const attendances = await prisma.attendance.findMany({
       where: { sessionId: id }
     });
 
-    // 3. Create a map for fast lookup
     const attendanceMap = {};
     attendances.forEach(a => {
       attendanceMap[a.studentId] = a;
     });
 
-    // 4. Combine students with their attendance status
     const fullAttendanceList = groupStudents.map(student => {
       const record = attendanceMap[student.id];
       return {
@@ -265,16 +312,83 @@ exports.getSessionAttendances = async (req, res) => {
       };
     });
 
-    res.status(200).json({ 
+    res.status(200).json({
       sessionId: id,
       totalStudents: fullAttendanceList.length,
       presentCount: attendances.length,
       absentCount: fullAttendanceList.length - attendances.length,
-      attendances: fullAttendanceList 
+      attendances: fullAttendanceList
     });
 
   } catch (error) {
     console.error('Get Attendances Error:', error.message);
     res.status(500).json({ message: 'Failed to fetch attendances', error: error.message });
+  }
+};
+
+exports.markManualAttendance = async (req, res) => {
+  const { id: sessionId } = req.params;
+  const { studentId } = req.body;
+
+  if (!studentId) {
+    return res.status(400).json({ message: 'studentId is required' });
+  }
+
+  try {
+    const session = await prisma.session.findUnique({
+      where: { id: sessionId },
+      select: { id: true, courseName: true }
+    });
+
+    if (!session) {
+      return res.status(404).json({ message: 'Session not found' });
+    }
+
+    const studentProfile = await prisma.student.findUnique({
+      where: { id: studentId },
+      include: { user: { select: { id: true, name: true } } }
+    });
+
+    if (!studentProfile) {
+      return res.status(404).json({ message: 'Student profile not found' });
+    }
+
+    const existingAttendance = await prisma.attendance.findUnique({
+      where: {
+        sessionId_studentId: {
+          sessionId,
+          studentId: studentProfile.id
+        }
+      }
+    });
+
+    if (existingAttendance) {
+      return res.status(409).json({ message: 'Student is already present' });
+    }
+
+    const attendance = await prisma.attendance.create({
+      data: {
+        sessionId,
+        studentId: studentProfile.id,
+        checkInAt: new Date(),
+        method: 'manual'
+      }
+    });
+
+    await notificationService.createAndSendNotification(studentProfile.user.id, {
+      title: "✅ Manual registration",
+      body: `Your attendance for ${session.courseName} has been marked manually by the professor.`,
+      type: "ATTENDANCE_RECORDED",
+      data: { attendanceId: attendance.id, sessionId: sessionId }
+    });
+
+    res.status(201).json({
+      message: 'Attendance recorded successfully',
+      attendance
+    });
+
+  } catch (error) {
+    console.error('Manual Attendance Error:', error.message);
+    res.status(500).json({ message: 'Failed to mark manual attendance', error: error.message });
   }
 };

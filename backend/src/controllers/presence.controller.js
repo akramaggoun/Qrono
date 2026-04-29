@@ -17,7 +17,13 @@ exports.scanQR = async (req, res) => {
   try {
     decoded = qrService.validateQrToken(qr_token);
   } catch (err) {
-    await logUnauthorizedAttempt(req.user.id, null, null, qr_token, 'Invalid or expired QR token');
+    // We don't have the student profile yet, so we fetch it to get the student record ID
+    const studentProfile = await prisma.student.findUnique({
+      where: { userId: req.user.id },
+      select: { id: true }
+    });
+    
+    await logUnauthorizedAttempt(studentProfile?.id || null, null, null, qr_token, 'Invalid or expired QR token');
     return res.status(401).json({ message: 'Invalid or expired QR code' });
   }
 
@@ -50,7 +56,7 @@ exports.scanQR = async (req, res) => {
 
     if (!session) {
       await logUnauthorizedAttempt(studentProfile.id, sessionId, null, qr_token, 'Session not found');
-      return res.status(404).json({ message: 'Session not found' });
+      return res.status(404).json({ message: 'error_session_not_found' });
     }
 
     const qrRecord = session.qrCodes[0];
@@ -58,7 +64,7 @@ exports.scanQR = async (req, res) => {
     // Sequence Diagram Step 4 : Check Revocation
     if (qrRecord && qrRecord.isRevoked) {
       await logUnauthorizedAttempt(studentProfile.id, sessionId, session.labId, qr_token, 'QR Code was revoked');
-      return res.status(400).json({ message: 'QR Code is revoked' });
+      return res.status(400).json({ message: 'error_qr_revoked' });
     }
 
     // Sequence Diagram Step 4 : Check Expiry
@@ -66,14 +72,14 @@ exports.scanQR = async (req, res) => {
     if (qrRecord) {
       if (now < qrRecord.validFrom || now > qrRecord.validUntil) {
         await logUnauthorizedAttempt(studentProfile.id, sessionId, session.labId, qr_token, 'QR Code expired');
-        return res.status(400).json({ message: 'QR Code expired' });
+        return res.status(400).json({ message: 'error_qr_expired' });
       }
     }
 
     // Sequence Diagram Step 5 : Check Session Status
     if (session.status !== 'ACTIVE') {
       await logUnauthorizedAttempt(studentProfile.id, sessionId, session.labId, qr_token, 'Session is not active');
-      return res.status(400).json({ message: 'Session is not active' });
+      return res.status(400).json({ message: 'error_session_inactive' });
     }
 
     // Sequence Diagram Step 6 : Check Student Group
@@ -88,7 +94,7 @@ exports.scanQR = async (req, res) => {
         studentProfile.user.name,
         session.courseName
       );
-      return res.status(403).json({ message: "You don't belong to this group" });
+      return res.status(403).json({ message: "error_wrong_group" });
     }
 
     // Sequence Diagram Step 7 : Check Duplicate
@@ -125,6 +131,52 @@ exports.scanQR = async (req, res) => {
       type: "ATTENDANCE_RECORDED",
       data: { attendanceId: attendance.id, sessionId: sessionId }
     });
+
+    // Check for "excessive absences" (5+)
+    try {
+      const allSessionsForCourse = await prisma.session.findMany({
+        where: {
+          groupId: studentProfile.groupId,
+          courseName: session.courseName,
+          status: 'CLOSED' // Only count officially finished ones? Or include ACTIVE?
+        }
+      });
+
+      const studentAttendancesForCourse = await prisma.attendance.count({
+        where: {
+          studentId: studentProfile.id,
+          session: { courseName: session.courseName }
+        }
+      });
+
+      const absenceCount = allSessionsForCourse.length - studentAttendancesForCourse;
+
+      if (absenceCount >= 5) {
+        // Notify both student and professor
+        await notificationService.createAndSendNotification(studentId, {
+          title: "⚠️ Absence Warning",
+          body: `Warning: You have reached ${absenceCount} absences in ${session.courseName}. You are at risk of exclusion.`,
+          type: "warning",
+          data: { courseName: session.courseName, absenceCount: absenceCount.toString() }
+        });
+
+        const professor = await prisma.professor.findUnique({
+          where: { id: session.professorId },
+          select: { userId: true }
+        });
+
+        if (professor) {
+          await notificationService.createAndSendNotification(professor.userId, {
+            title: "📢 Student Absence Alert",
+            body: `Student ${studentProfile.user.name} has reached ${absenceCount} absences in ${session.courseName}.`,
+            type: "warning",
+            data: { studentId: studentProfile.id.toString(), courseName: session.courseName }
+          });
+        }
+      }
+    } catch (countErr) {
+      console.error('Failed to check absence threshold:', countErr.message);
+    }
 
     res.status(201).json({
       message: 'Attendance recorded successfully',
@@ -200,8 +252,8 @@ async function logUnauthorizedAttempt(studentId, sessionId, labId, scannedToken,
     if (reason === 'Wrong group' && professorUserId) {
         // Notify Professor
         await notificationService.createAndSendNotification(professorUserId, {
-            title: "⚠️ Accès non autorisé",
-            body: `${studentName} a tenté d'accéder à votre séance : ${courseName}`,
+            title: "notif_unauthorized_title",
+            body: `notif_unauthorized_body|${studentName}|${courseName}`,
             type: "UNAUTHORIZED_ACCESS",
             data: { studentId, sessionId, reason }
         });
@@ -210,8 +262,8 @@ async function logUnauthorizedAttempt(studentId, sessionId, labId, scannedToken,
         const admins = await prisma.admin.findMany({ select: { userId: true } });
         for (const admin of admins) {
             await notificationService.createAndSendNotification(admin.userId, {
-                title: "🚨 Alerte sécurité",
-                body: `Tentative d'accès non autorisé détectée : ${courseName}.`,
+                title: "notif_admin_alert_title",
+                body: `notif_admin_alert_body|${courseName}`,
                 type: "UNAUTHORIZED_ACCESS",
                 data: { studentId, sessionId, reason }
             });
