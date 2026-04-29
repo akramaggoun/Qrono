@@ -12,6 +12,7 @@ exports.createSession = async (req, res) => {
   const recurrence = req.body.recurrence || null;
   const groupId = req.body.groupId || req.body.group_id;
   const labId = req.body.labId || req.body.lab_id;
+  const scheduleId = req.body.scheduleId || req.body.schedule_id || null;
 
   if (!courseName || !startTime || !endTime || !groupId || !labId) {
     return res.status(400).json({ message: 'Missing required session fields' });
@@ -48,6 +49,35 @@ exports.createSession = async (req, res) => {
 
     if (!professorProfile) {
       return res.status(403).json({ message: 'Professor profile not found' });
+    let professorId;
+
+    if (req.user.role === 'admin') {
+      // Admin provides professorId in the body
+      professorId = req.body.professorId || req.body.professor_id;
+      if (!professorId) {
+        return res.status(400).json({ message: 'Admin must specify professorId' });
+      }
+      // Verify the professor exists
+      let prof = await prisma.professor.findUnique({ where: { id: professorId } });
+      if (!prof) {
+        prof = await prisma.professor.findUnique({ where: { userId: professorId } });
+      }
+  
+      if (!prof) {
+        return res.status(404).json({ message: 'Professor not found' });
+      }
+      professorId = prof.id;
+    } else {
+      // Professor uses their own profile
+      const professorProfile = await prisma.professor.findUnique({
+        where: { userId: req.user.id },
+        select: { id: true },
+      });
+
+      if (!professorProfile) {
+        return res.status(403).json({ message: 'Professor profile not found' });
+      }
+      professorId = professorProfile.id;
     }
 
     // Conflict / Availability Check
@@ -95,9 +125,10 @@ exports.createSession = async (req, res) => {
         endTime: end,
         isRecurring: isRecurring || false,
         recurrence: recurrence || null,
-        professorId: professorProfile.id,
+        professorId: professorId,
         groupId,
         labId,
+        scheduleId: scheduleId || undefined,
         status: 'ACTIVE'
       },
       include: {
@@ -390,5 +421,29 @@ exports.markManualAttendance = async (req, res) => {
   } catch (error) {
     console.error('Manual Attendance Error:', error.message);
     res.status(500).json({ message: 'Failed to mark manual attendance', error: error.message });
+  }
+};
+exports.getSessionsBySchedule = async (req, res) => {
+  const { scheduleId } = req.params;
+  try {
+    const sessions = await prisma.session.findMany({
+      where: { scheduleId },
+      include: {
+        group: { select: { name: true } },
+        lab: { select: { name: true } },
+        qrCodes: { where: { isRevoked: false }, select: { token: true, validUntil: true } },
+        _count: { select: { attendance: true } },
+      },
+      orderBy: { startTime: 'asc' },
+    });
+
+    const result = sessions.map(s => ({
+      ...s,
+      qr_code: s.qrCodes[0] || null,
+    }));
+    res.json({ sessions: result });
+  } catch (error) {
+    console.error('getSessionsBySchedule error:', error);
+    res.status(500).json({ message: 'Failed to fetch sessions', error: error.message });
   }
 };

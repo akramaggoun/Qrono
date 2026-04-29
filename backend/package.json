@@ -4,8 +4,8 @@
   "description": "",
   "main": "app.js",
   "scripts": {
-    "start": "node src/app.js && npx prisma db seed",
-    "dev": "nodemon src/app.js",
+    "start": "npx prisma db seed && node src/app.js",
+    "dev": "npx prisma db seed && nodemon src/app.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

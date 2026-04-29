@@ -15,5 +15,6 @@ router.patch('/:id/close', checkRole(['professor', 'admin']), sessionController.
 router.get('/:id/attendances', checkRole(['professor', 'admin']), sessionController.getSessionAttendances);
 
 router.post('/:id/manual-attendance', checkRole(['professor', 'admin']), sessionController.markManualAttendance);
+router.get('/schedule/:scheduleId', checkRole(['admin', 'professor']), sessionController.getSessionsBySchedule);
 
 module.exports = router;
