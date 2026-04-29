@@ -66,7 +66,7 @@ class QronoApp extends StatelessWidget {
     return OverlaySupport.global(
       child: MaterialApp(
         title: 'Qrono',
-        locale: localizationProvider.locale,
+        locale: context.locale,
         supportedLocales: context.supportedLocales,
         localizationsDelegates: context.localizationDelegates,
         debugShowCheckedModeBanner: false,

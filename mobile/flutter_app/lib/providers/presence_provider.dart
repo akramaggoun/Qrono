@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../core/network/api_client.dart';
 
 class PresenceProvider extends ChangeNotifier {
@@ -94,7 +95,7 @@ class PresenceProvider extends ChangeNotifier {
         _attendances = jsonDecode(response.body)['attendances'] ?? [];
       }
     } catch (e) {
-      _errorMessage = "Erreur présences: $e";
+      _errorMessage = "${'error_presence_fetch'.tr()}: $e";
     }
     _isLoading = false;
     notifyListeners();
@@ -109,7 +110,7 @@ class PresenceProvider extends ChangeNotifier {
         _myAttendances = jsonDecode(response.body)['attendances'] ?? [];
       }
     } catch (e) {
-      _errorMessage = "Erreur historique: $e";
+      _errorMessage = "${'error_history_fetch'.tr()}: $e";
     }
     _isLoading = false;
     notifyListeners();
@@ -132,27 +133,24 @@ class PresenceProvider extends ChangeNotifier {
       if (response.statusCode == 201) {
         _attendanceData = jsonDecode(response.body)['attendance'];
         return true;
-      } else if (response.statusCode == 404) {
-        _errorMessage = "Code QR invalide.";
-      } else if (response.statusCode == 400) {
-        final msg = jsonDecode(response.body)['message'];
-        if (msg == "QR Code is revoked") {
-          _errorMessage = "La session est fermée.";
-        } else if (msg == "QR Code expired") {
-          _errorMessage = "Le code QR a expiré.";
-        } else if (msg == "Session is not active") {
-          _errorMessage = "La session n'est plus active.";
-        } else {
-          _errorMessage = "Erreur de validation du QR.";
-        }      } else if (response.statusCode == 403) {
-        _errorMessage = "Cette session n'est pas destinée à votre groupe.";
-      } else if (response.statusCode == 409) {
-        _errorMessage = "Vous avez déjà enregistré votre présence.";
       } else {
-        _errorMessage = "Une erreur est survenue lors de l'enregistrement.";
+        final decoded = jsonDecode(response.body);
+        final msg = decoded['message']?.toString() ?? '';
+        
+        if (msg.startsWith('error_')) {
+          _errorMessage = msg.tr();
+        } else if (response.statusCode == 404) {
+          _errorMessage = "error_session_not_found".tr();
+        } else if (response.statusCode == 403) {
+          _errorMessage = "error_wrong_group".tr();
+        } else if (response.statusCode == 409) {
+          _errorMessage = "error_already_registered".tr();
+        } else {
+          _errorMessage = "error_scan_generic".tr();
+        }
       }
     } catch (e) {
-      _errorMessage = "Erreur réseau ou serveur.";
+      _errorMessage = "error_scan_network".tr();
       _isLoading = false;
       notifyListeners();
     }
@@ -165,7 +163,7 @@ class PresenceProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await _apiClient.post('/presences/manual', {
+      final response = await _apiClient.post('/sessions/$sessionId/manual-attendance', {
         'sessionId': sessionId,
         'studentId': studentId,
       });
@@ -173,16 +171,16 @@ class PresenceProvider extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
 
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 || response.statusCode == 201) {
         // Refresh the list after manual recording
         await fetchSessionAttendance(sessionId);
         return true;
       } else {
         final errorData = jsonDecode(response.body);
-        _errorMessage = errorData['message'] ?? 'Erreur lors de l\'enregistrement manuel.';
+        _errorMessage = errorData['message']?.toString().tr() ?? 'error_manual_record'.tr();
       }
     } catch (e) {
-      _errorMessage = "Erreur réseau: $e";
+      _errorMessage = "${'error_scan_network'.tr()}: $e";
       _isLoading = false;
       notifyListeners();
     }
@@ -191,19 +189,19 @@ class PresenceProvider extends ChangeNotifier {
 
   Future<Map<String, dynamic>?> fetchStudentStats(String studentId) async {
     try {
-      final response = await _apiClient.get('/presences/student/$studentId/stats');
+      final response = await _apiClient.get('/statistics/student/$studentId');
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       }
     } catch (e) {
-      _errorMessage = "Erreur stats étudiant: $e";
+      _errorMessage = "${'error_stats_fetch'.tr()}: $e";
     }
     return null;
   }
 
   Future<bool> toggleExclusion(String studentRecordId, String courseName, bool exclude) async {
     try {
-      final response = await _apiClient.post('/presences/exclude', {
+      final response = await _apiClient.post('/statistics/exclude', {
         'studentId': studentRecordId,
         'courseName': courseName,
         'exclude': exclude,
@@ -217,7 +215,7 @@ class PresenceProvider extends ChangeNotifier {
 
   Future<bool> isStudentExcluded(String studentRecordId, String courseName) async {
     try {
-      final response = await _apiClient.get('/presences/check-exclusion?studentId=$studentRecordId&courseName=$courseName');
+      final response = await _apiClient.get('/statistics/check-exclusion?studentId=$studentRecordId&courseName=$courseName');
       if (response.statusCode == 200) {
         return jsonDecode(response.body)['isExcluded'] ?? false;
       }
@@ -227,4 +225,9 @@ class PresenceProvider extends ChangeNotifier {
     return false;
   }
 }
+
+
+
+
+
 

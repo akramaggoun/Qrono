@@ -1,4 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
+﻿const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
 const prisma = new PrismaClient();
 
@@ -12,7 +12,7 @@ exports.getAllUsers = async (req, res) => {
         isActive: true,
         createdAt: true,
         student: { select: { urn: true, group: { select: { name: true } } } },
-        professor: { select: { email: true, professorCode: true, department: true } },
+        professor: { select: { id: true, email: true, professorCode: true, department: true } },
         admin: { select: { email: true } }
       }
     });
@@ -31,7 +31,8 @@ exports.getAllUsers = async (req, res) => {
         createdAt: u.createdAt,
         matricule: u.student?.urn || u.professor?.professorCode || '',
         email: email,
-        department: u.professor?.department || u.student?.group?.name || ''
+        department: u.professor?.department || u.student?.group?.name || '',
+        professor: u.professor // Include raw profile for mapping
       };
     });
 
@@ -42,7 +43,7 @@ exports.getAllUsers = async (req, res) => {
 };
 
 exports.createUser = async (req, res) => {
-  console.log('📥 CREATE USER REQUEST:', req.body);
+  console.log('ðŸ“¥ CREATE USER REQUEST:', req.body);
   const { name, password, role, email, isActive, groupId, studentCode, professorCode, department } = req.body;
 
   const validRole = role.toLowerCase(); 
@@ -166,3 +167,4 @@ exports.deleteUser = async (req, res) => {
     res.status(500).json({ message: "Failed to delete user", error: error.message });
   }
 };
+

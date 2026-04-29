@@ -15,7 +15,7 @@ class ConfirmPresenceScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final session = attendanceData['session'] ?? {};
     final checkInAt = attendanceData['checkInAt'] != null 
-        ? DateTime.parse(attendanceData['checkInAt']) 
+        ? DateTime.parse(attendanceData['checkInAt']).toLocal() 
         : DateTime.now();
 
     return Scaffold(

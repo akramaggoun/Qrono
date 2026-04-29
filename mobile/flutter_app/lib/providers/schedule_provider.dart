@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../core/network/api_client.dart';
 
@@ -39,11 +39,15 @@ class ScheduleProvider extends ChangeNotifier {
       if (professorsResponse.statusCode == 200) {
         final data = jsonDecode(professorsResponse.body);
         final allUsers = List<Map<String, dynamic>>.from(data['users'] ?? []);
-        final filteredProfessors = <Map<String, dynamic>>[];
+        final List<Map<String, dynamic>> filteredProfessors = [];
         for (var u in allUsers) {
           if (u['role'] == 'professor') {
+            // Check if professor object was returned in the user list
+            final professorProfile = u['professor'];
             filteredProfessors.add({
               'id': u['id'],
+              // Extract the Profile UUID (which is what Schedule & Session models use as professorId)
+              'professorProfileId': professorProfile != null ? professorProfile['id'] : u['id'], 
               'name': u['name'],
               'department': u['department'] ?? 'Unknown Department'
             });
@@ -75,7 +79,7 @@ class ScheduleProvider extends ChangeNotifier {
         throw Exception('Failed to fetch laboratories from database');
       }
     } catch (e) {
-      debugPrint('Error fetching lookups from database: $e');
+      print('Error fetching lookups from database: $e');
       _professors = [];
       _groups = [];
       _labs = [];
@@ -91,17 +95,24 @@ class ScheduleProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await _apiClient.get('/schedules/professor/$professorId');
+      final response = await _apiClient.get('/schedules?professorId=$professorId');
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        _professorSessions = List<Map<String, dynamic>>.from(data['sessions'] ?? []);
+        final schedules = data['schedules'] as List;
+        List<Map<String, dynamic>> allSessions = [];
+        for (var s in schedules) {
+          if (s['sessions'] != null) {
+            allSessions.addAll(List<Map<String, dynamic>>.from(s['sessions']));
+          }
+        }
+        _professorSessions = allSessions;
       } else {
         _professorSessions = [];
         throw Exception('Failed to fetch professor sessions from database');
       }
     } catch (e) {
-      debugPrint('Error fetching professor sessions: $e');
+      print('Error fetching professor sessions: $e');
       _professorSessions = [];
     } finally {
       _isLoading = false;
@@ -119,9 +130,15 @@ class ScheduleProvider extends ChangeNotifier {
       final createdSessions = <Map<String, dynamic>>[];
       
       for (final session in sessions) {
-        // Parse the time slots to get actual DateTime values
-        final now = DateTime.now();
-        final sessionDate = now.add(Duration(days: (session['dayIndex'] as int) - now.weekday + 1));
+        // Calculate the next occurrence of this weekday
+        // session['dayOfWeek'] is 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
+        final int targetDay = session['dayOfWeek'] ?? session['dayIndex'] ?? 0;
+        
+        DateTime now = DateTime.now();
+        int currentDay = now.weekday % 7; // Convert 1-7 (Mon-Sun) to 0-6 (Sun-Sat)
+        
+        int daysUntil = (targetDay - currentDay + 7) % 7;
+        DateTime sessionDate = now.add(Duration(days: daysUntil));
         
         final timeParts = (session['startTime'] as String).split(':');
         final startTime = DateTime(
@@ -154,7 +171,7 @@ class ScheduleProvider extends ChangeNotifier {
         if (response.statusCode == 200 || response.statusCode == 201) {
           createdSessions.add(session);
         } else {
-          debugPrint('Failed to create session: ${response.body}');
+          print('Failed to create session: ${response.body}');
           // Continue to try creating other sessions
         }
       }
@@ -164,7 +181,7 @@ class ScheduleProvider extends ChangeNotifier {
       }
       return false;
     } catch (e) {
-      debugPrint('Error assigning schedule: $e');
+      print('Error assigning schedule: $e');
       return false;
     } finally {
       _isLoading = false;
@@ -172,4 +189,5 @@ class ScheduleProvider extends ChangeNotifier {
     }
   }
 }
+
 

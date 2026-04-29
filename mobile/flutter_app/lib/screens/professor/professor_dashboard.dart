@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import '../../core/constants/app_colors.dart';
 import 'attendance_list_screen.dart';
@@ -88,7 +88,7 @@ class _ProfessorDashboardState extends State<ProfessorDashboard> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _buildSectionTitle('active_recent_sessions'.tr()),
+                      _buildSectionTitle('active_sessions'.tr()),
                       TextButton(
                         onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MySessionsScreen())),
                         child: Text('view_all_btn'.tr(), style: const TextStyle(color: AppColors.primaryTeal, fontWeight: FontWeight.bold)),
@@ -196,20 +196,23 @@ class _ProfessorDashboardState extends State<ProfessorDashboard> {
   }
 
   Widget _buildModernStats(List sessions) {
-    num totalAttendance = 0;
-    for (var s in sessions) {
-      totalAttendance += (s.attendanceCount ?? 0);
-    }
-    final avg = sessions.isNotEmpty ? (totalAttendance / sessions.length).toStringAsFixed(1) : '0';
+    return Consumer<SessionProvider>(
+      builder: (context, provider, child) {
+        final stats = provider.professorStats;
+        final totalSessions = stats['totalSessions']?.toString() ?? '0';
+        final todayAttendance = stats['todayAttendance']?.toString() ?? '0';
+        final attendanceRate = stats['attendanceRate']?.toString() ?? '0';
 
-    return Row(
-      children: [
-        _buildStatsCard('sessions_count_label'.tr(), sessions.length.toString(), Icons.layers_rounded, Colors.blue),
-        const SizedBox(width: 12),
-        _buildStatsCard('today_attendance'.tr(), totalAttendance.toString(), Icons.group_rounded, Colors.teal),
-        const SizedBox(width: 12),
-        _buildStatsCard('attendance_rate'.tr(), avg, Icons.analytics_rounded, Colors.orange),
-      ],
+        return Row(
+          children: [
+            _buildStatsCard('sessions_count_label'.tr(), totalSessions, Icons.layers_rounded, Colors.blue),
+            const SizedBox(width: 12),
+            _buildStatsCard('today_attendance'.tr(), todayAttendance, Icons.group_rounded, Colors.teal),
+            const SizedBox(width: 12),
+            _buildStatsCard('attendance_rate'.tr(), attendanceRate, Icons.analytics_rounded, Colors.orange),
+          ],
+        );
+      }
     );
   }
 
@@ -239,7 +242,11 @@ class _ProfessorDashboardState extends State<ProfessorDashboard> {
   }
 
   Widget _buildSessionList(List sessions) {
-    if (sessions.isEmpty) {
+    // Filter sessions to only show those that are ACTIVE AND have a QR code generated
+    // This matches the user requirement: "show only active sessions when start time arrives and QR is generated"
+    final activeSessions = sessions.where((s) => s.status == 'ACTIVE' && s.qrToken != null && DateTime.now().isAfter(s.startTime) && DateTime.now().isBefore(s.endTime)).toList();
+
+    if (activeSessions.isEmpty) {
       return Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 40),
@@ -247,20 +254,24 @@ class _ProfessorDashboardState extends State<ProfessorDashboard> {
           children: [
             Icon(Icons.inbox_rounded, size: 64, color: Colors.grey.withValues(alpha: 0.2)),
             const SizedBox(height: 16),
-            Text('empty_session_history'.tr(), 
+            Text('no_active_sessions_with_qr'.tr(), 
               style: const TextStyle(color: Color(0xFF9E9E9E), fontSize: 14, fontWeight: FontWeight.w500)),
           ],
         ),
       );
     }
 
+    final limitedSessions = activeSessions.take(5).toList();
     return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      itemCount: sessions.take(5).length,
+      itemCount: limitedSessions.length,
       itemBuilder: (context, index) {
-        final session = sessions[index];
-        bool isActive = session.status == 'ACTIVE';
+        final session = limitedSessions[index];
+        // 🛑 MASTER OVERRIDE: Same logic as history screen
+        final bool isClosed = DateTime.now().isAfter(session.endTime.toLocal()) || 
+                             (session.status ?? '').toUpperCase() == 'CLOSED';
+        bool isActive = !isClosed;
         
         return Container(
           margin: const EdgeInsets.only(bottom: 16),
@@ -306,7 +317,7 @@ class _ProfessorDashboardState extends State<ProfessorDashboard> {
                           ],
                         ),
                         const SizedBox(height: 6),
-                        Text('${session.groupName} • ${session.labName}', 
+                        Text('${session.groupName} â€¢ ${session.labName}', 
                           style: const TextStyle(fontSize: 12, color: Color(0xFF6C757D), fontWeight: FontWeight.w500)),
                       ],
                     ),
@@ -368,4 +379,8 @@ class _ProfessorDashboardState extends State<ProfessorDashboard> {
     );
   }
 }
+
+
+
+
 

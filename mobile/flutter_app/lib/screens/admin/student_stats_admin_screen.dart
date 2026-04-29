@@ -130,8 +130,11 @@ class _StudentStatsAdminScreenState extends State<StudentStatsAdminScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(student['name'], style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                Text(student['email'], style: const TextStyle(color: AppColors.grayText, fontSize: 13)),
-                const SizedBox(height: 8),
+                Text(student['email'], style: const TextStyle(color: AppColors.grayText, fontSize: 13)),                if (_isExcluded)
+                   Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text('excluded_status_label'.tr(), style: const TextStyle(color: Colors.red, fontSize: 11, fontWeight: FontWeight.bold)),
+                  ),                const SizedBox(height: 8),
                 Row(
                   children: [
                     Container(
@@ -180,24 +183,50 @@ class _StudentStatsAdminScreenState extends State<StudentStatsAdminScreen> {
   }
 
   Widget _buildSummaryCards() {
-    final present = _stats!['presentCount'];
-    final absent = _stats!['absentCount'];
-    final total = _stats!['totalScheduled'];
-    final rate = total > 0 ? (present / total * 100).round() : 0;
+    final present = _stats!['presentCount'] ?? _stats!['attendanceCount'] ?? 0;
+    final absent = _stats!['absentCount'] ?? 0;
+    final total = _stats!['totalScheduled'] ?? 0;
+    final rate = (total != null && total > 0) ? (present / total * 100).round() : 0;
+    
+    // Check for high absences (>= 5)
+    final bool isHighAbsence = absent >= 5;
 
     return Column(
       children: [
+        if (isHighAbsence)
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.only(bottom: 15),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.red.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.red.withOpacity(0.3)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.warning_amber_rounded, color: Colors.red),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'student_at_risk_warning'.tr(args: [absent.toString()]),
+                    style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+          ),
         Row(
           children: [
             Expanded(child: _buildStatCard('present'.tr(), '$present', Icons.check_circle_rounded, Colors.green)),
             const SizedBox(width: 15),
-            Expanded(child: _buildStatCard('absences_count'.tr(), '$absent', Icons.cancel_rounded, Colors.redAccent)),
+            Expanded(child: _buildStatCard('absences_count'.tr(), '$absent', Icons.cancel_rounded, isHighAbsence ? Colors.red : Colors.redAccent)),
           ],
         ),
         const SizedBox(height: 15),
         Row(
           children: [
-            Expanded(child: _buildStatCard('total'.tr(), '$total', Icons.calendar_today_rounded, Colors.blue)),
+            Expanded(child: _buildStatCard('total_sessions'.tr(), '$total', Icons.calendar_today_rounded, Colors.blue)),
             const SizedBox(width: 15),
             Expanded(child: _buildStatCard('rate'.tr(), '$rate%', Icons.analytics_rounded, Colors.orange)),
           ],
@@ -227,7 +256,7 @@ class _StudentStatsAdminScreenState extends State<StudentStatsAdminScreen> {
   }
 
   Widget _buildAttendanceList() {
-    final attendances = _stats!['attendances'] as List;
+    final attendances = (_stats!['recentAttendances'] ?? _stats!['attendances'] ?? []) as List;
     if (attendances.isEmpty) {
       return Center(
         child: Padding(
@@ -243,8 +272,8 @@ class _StudentStatsAdminScreenState extends State<StudentStatsAdminScreen> {
       itemCount: attendances.length,
       itemBuilder: (context, index) {
         final a = attendances[index];
-        final session = a['session'];
-        final date = DateTime.parse(a['checkInAt']).toLocal();
+        final session = a['session'] ?? {'courseName': 'Unknown Course'};
+        DateTime date; try { date = DateTime.parse(a['checkInAt'] ?? a['session']?['startTime'] ?? DateTime.now().toIso8601String()).toLocal(); } catch (e) { date = DateTime.now(); }
         final dateStr = '${date.day}/${date.month} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
 
         return Container(
@@ -274,8 +303,8 @@ class _StudentStatsAdminScreenState extends State<StudentStatsAdminScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(session['courseName'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                    Text(session['lab']['name'], style: const TextStyle(color: AppColors.grayText, fontSize: 12)),
+                    Text(session['courseName'] ?? 'Course', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                    Text(session['lab']?['name'] ?? 'General', style: const TextStyle(color: AppColors.grayText, fontSize: 12)),
                   ],
                 ),
               ),
@@ -287,4 +316,14 @@ class _StudentStatsAdminScreenState extends State<StudentStatsAdminScreen> {
     );
   }
 }
+
+
+
+
+
+
+
+
+
+
 

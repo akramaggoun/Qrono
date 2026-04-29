@@ -49,7 +49,7 @@ class LocalizationProvider extends ChangeNotifier {
   Future<void> setLanguage(String languageCode) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      _locale = Locale(languageCode);
+      _locale = Locale(languageCode); 
       await prefs.setString(_languageKey, languageCode);
       
       notifyListeners();

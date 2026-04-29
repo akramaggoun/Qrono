@@ -44,15 +44,46 @@ exports.createSchedule = async (req, res) => {
 exports.getAllSchedules = async (req, res) => {
   try {
     const { professorId } = req.query;
+
     const where = professorId ? { professorId } : {};
     const schedules = await prisma.schedule.findMany({
       where,
       include: {
         professor: { select: { id: true, user: { select: { name: true } } } },
+        sessions: {
+          include: {
+            lab: { select: { name: true } },
+            group: { select: { name: true } },
+          },
+          orderBy: { startTime: 'asc' },
+        },
         _count: { select: { sessions: true } },
       },
       orderBy: { createdAt: 'desc' },
     });
+
+    // Fallback: If no schedule containers exist but professor has active sessions,
+    // return them in a virtual schedule for the planning screen
+    if (schedules.length === 0 && professorId) {
+      const sessions = await prisma.session.findMany({
+        where: { professorId },
+        include: {
+          lab: { select: { name: true } },
+          group: { select: { name: true } },
+        },
+      });
+
+      if (sessions.length > 0) {
+        return res.json({
+          schedules: [{
+            id: 'virtual_schedule',
+            name: 'Active Sessions',
+            sessions: sessions
+          }]
+        });
+      }
+    }
+
     res.json({ schedules });
   } catch (error) {
     console.error('getAllSchedules error:', error);

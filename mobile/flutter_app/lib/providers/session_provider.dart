@@ -14,11 +14,18 @@ class SessionProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
 
+  Map<String, dynamic> _professorStats = {
+    'totalSessions': 0,
+    'todayAttendance': 0,
+    'attendanceRate': '0'
+  };
+
   List<LaboratoryModel> get laboratories => _laboratories;
   List<GroupModel> get groups => _groups;
   List<SessionModel> get sessions => _sessions;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
+  Map<String, dynamic> get professorStats => _professorStats;
 
   Future<void> fetchLabsAndGroups() async {
     _isLoading = true;
@@ -48,7 +55,16 @@ class SessionProvider extends ChangeNotifier {
       final response = await _apiClient.get('/sessions/my-sessions');
       if (response.statusCode == 200) {
         final List data = jsonDecode(response.body)['sessions'] ?? [];
-        _sessions = data.map((e) => SessionModel.fromJson(e)).toList();
+        
+        // ⬇️ LIST PROTECTION: Clear existing list before mapping new ones to prevent doubling ⬇️
+        final List<SessionModel> newList = data.map((e) => SessionModel.fromJson(e)).toList();
+        _sessions = newList;
+      }
+
+      // Fetch real-time stats for professor
+      final statsRes = await _apiClient.get('/statistics/professor');
+      if (statsRes.statusCode == 200) {
+        _professorStats = jsonDecode(statsRes.body);
       }
     } catch (e) {
       _errorMessage = "Erreur sessions: $e";
@@ -61,13 +77,17 @@ class SessionProvider extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      final response = await _apiClient.get('/sessions/student-sessions');
+      // For now we use the same endpoint but backend might need special filter
+      final response = await _apiClient.get('/sessions/my-sessions');
       if (response.statusCode == 200) {
         final List data = jsonDecode(response.body)['sessions'] ?? [];
-        _sessions = data.map((e) => SessionModel.fromJson(e)).toList();
+        
+        // ⬇️ LIST PROTECTION: Ensure list is fresh ⬇️
+        final List<SessionModel> newList = data.map((e) => SessionModel.fromJson(e)).toList();
+        _sessions = newList;
       }
     } catch (e) {
-      _errorMessage = "Erreur sessions étudiant: $e";
+      _errorMessage = "Erreur sessions: $e";
     }
     _isLoading = false;
     notifyListeners();
@@ -84,21 +104,21 @@ class SessionProvider extends ChangeNotifier {
 
       if (response.statusCode == 201) {
         final body = jsonDecode(response.body);
-        debugPrint('📥 SESSION CREATED IN BACKEND: $body');
+        print('📥 SESSION CREATED IN BACKEND: $body');
         final sessionData = body['session'];
         try {
           final session = SessionModel.fromJson(sessionData);
-          debugPrint('✅ SESSION PARSED SUCCESSFULLY: ${session.courseName}');
+          print('✅ SESSION PARSED SUCCESSFULLY: ${session.courseName}');
           return session;
         } catch (e) {
-          debugPrint('❌ ERROR PARSING SESSION MODEL: $e');
+          print('❌ ERROR PARSING SESSION MODEL: $e');
           _errorMessage = "Erreur de formatage des données.";
           return null;
         }
       } else {
         final errorBody = jsonDecode(response.body);
         _errorMessage = errorBody['message'] ?? "Erreur lors de la création de la session.";
-        debugPrint('❌ SERVER REJECTED SESSION: $_errorMessage');
+        print('❌ SERVER REJECTED SESSION: $_errorMessage');
       }
     } catch (e) {
       _errorMessage = "Une erreur est survenue.";
@@ -117,4 +137,3 @@ class SessionProvider extends ChangeNotifier {
     }
   }
 }
-
