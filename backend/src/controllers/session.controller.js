@@ -29,62 +29,35 @@ exports.createSession = async (req, res) => {
   }
 
   try {
-    let professorProfile;
-
-    if (req.user.role === 'admin') {
-      const professorId = req.body.professorId;
-      if (!professorId) {
-        return res.status(400).json({ message: 'professorId is required when admin creates a session' });
-      }
-      professorProfile = await prisma.professor.findUnique({
-        where: { userId: professorId },
-        select: { id: true }
-      });
-    } else {
-      professorProfile = await prisma.professor.findUnique({
-        where: { userId: req.user.id },
-        select: { id: true }
-      });
-    }
-
-    if (!professorProfile) {
-      return res.status(403).json({ message: 'Professor profile not found' });
     let professorId;
 
     if (req.user.role === 'admin') {
-      // Admin provides professorId in the body
-      professorId = req.body.professorId || req.body.professor_id;
-      if (!professorId) {
+      const professorId_body = req.body.professorId || req.body.professor_id;
+      if (!professorId_body) {
         return res.status(400).json({ message: 'Admin must specify professorId' });
       }
-      // Verify the professor exists
-      let prof = await prisma.professor.findUnique({ where: { id: professorId } });
+      let prof = await prisma.professor.findUnique({ where: { id: professorId_body } });
       if (!prof) {
-        prof = await prisma.professor.findUnique({ where: { userId: professorId } });
+        prof = await prisma.professor.findUnique({ where: { userId: professorId_body } });
       }
-  
       if (!prof) {
         return res.status(404).json({ message: 'Professor not found' });
       }
       professorId = prof.id;
     } else {
-      // Professor uses their own profile
       const professorProfile = await prisma.professor.findUnique({
         where: { userId: req.user.id },
         select: { id: true },
       });
-
       if (!professorProfile) {
         return res.status(403).json({ message: 'Professor profile not found' });
       }
       professorId = professorProfile.id;
     }
 
-    // Conflict / Availability Check
-    const conflictingSessions = await prisma.session.findMany({
+    const stillConflicting = await prisma.session.findMany({
       where: {
-        labId: labId,
-        status: 'ACTIVE',
+        labId,
         OR: [
           {
             startTime: { lt: end },
@@ -94,27 +67,8 @@ exports.createSession = async (req, res) => {
       }
     });
 
-    if (conflictingSessions.length > 0) {
-      // ⬇️ NEW: If we found conflicting sessions, let's try to auto-close them first ⬇️
-      await prisma.autoCloseExpiredSessions();
-      
-      // Re-check after closing
-      const stillConflicting = await prisma.session.findMany({
-        where: {
-          labId: labId,
-          status: 'ACTIVE',
-          OR: [
-            {
-              startTime: { lt: end },
-              endTime: { gt: start }
-            }
-          ]
-        }
-      });
-
-      if (stillConflicting.length > 0) {
-        return res.status(409).json({ message: 'Laboratory already occupied at this time' });
-      }
+    if (stillConflicting.length > 0) {
+      return res.status(409).json({ message: 'Laboratory already occupied at this time' });
     }
 
     // Create Session
@@ -447,3 +401,5 @@ exports.getSessionsBySchedule = async (req, res) => {
     res.status(500).json({ message: 'Failed to fetch sessions', error: error.message });
   }
 };
+
+
