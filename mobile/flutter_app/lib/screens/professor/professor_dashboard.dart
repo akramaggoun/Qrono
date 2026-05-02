@@ -1,0 +1,386 @@
+﻿import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
+import '../../core/constants/app_colors.dart';
+import 'attendance_list_screen.dart';
+import 'weekly_schedule_screen.dart';
+import 'my_sessions_screen.dart';
+import '../notification_screen.dart';
+import 'package:provider/provider.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/notification_provider.dart';
+import '../../providers/session_provider.dart';
+import '../auth/login_screen.dart';
+
+class ProfessorDashboard extends StatefulWidget {
+  const ProfessorDashboard({super.key});
+
+  @override
+  State<ProfessorDashboard> createState() => _ProfessorDashboardState();
+}
+
+class _ProfessorDashboardState extends State<ProfessorDashboard> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final notifProvider = Provider.of<NotificationProvider>(context, listen: false);
+      
+      if (authProvider.userId != null) {
+        notifProvider.initSocket(authProvider.userId!);
+      }
+      
+      notifProvider.fetchNotifications();
+      Provider.of<SessionProvider>(context, listen: false).fetchMySessions();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFB),
+      appBar: AppBar(
+        elevation: 0,
+        backgroundColor: Colors.white,
+        centerTitle: false,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('professor_dashboard'.tr(), 
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF1A1C1E))),
+            Text(Provider.of<AuthProvider>(context).userName ?? 'University Faculty', 
+              style: const TextStyle(fontSize: 12, color: Color(0xFF6C757D), fontWeight: FontWeight.w500)),
+          ],
+        ),
+        actions: [
+          _buildNotificationIcon(),
+          const SizedBox(width: 8),
+          IconButton(
+            icon: const Icon(Icons.power_settings_new_rounded, color: Colors.redAccent),
+            onPressed: () => _showLogoutDialog(context),
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
+      body: Consumer<SessionProvider>(
+        builder: (context, sessionProvider, child) {
+          final sessions = sessionProvider.sessions;
+          
+          if (sessionProvider.isLoading && sessions.isEmpty) {
+            return const Center(child: CircularProgressIndicator(color: AppColors.primaryTeal));
+          }
+
+          return RefreshIndicator(
+            onRefresh: () => sessionProvider.fetchMySessions(),
+            color: AppColors.primaryTeal,
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildQuickActions(context),
+                  const SizedBox(height: 30),
+                  _buildSectionTitle('academic_insights'.tr()),
+                  const SizedBox(height: 15),
+                  _buildModernStats(sessions),
+                  const SizedBox(height: 30),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildSectionTitle('active_sessions'.tr()),
+                      TextButton(
+                        onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MySessionsScreen())),
+                        child: Text('view_all_btn'.tr(), style: const TextStyle(color: AppColors.primaryTeal, fontWeight: FontWeight.bold)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  _buildSessionList(sessions),
+                ],
+              ),
+            ),
+          );
+        }
+      ),
+    );
+  }
+
+  Widget _buildNotificationIcon() {
+    return Consumer<NotificationProvider>(
+      builder: (context, provider, child) => Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(
+            decoration: BoxDecoration(color: Colors.grey.withValues(alpha: 0.05), shape: BoxShape.circle),
+            child: IconButton(
+              icon: const Icon(Icons.notifications_none_rounded, color: Color(0xFF1A1C1E)),
+              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationScreen())),
+            ),
+          ),
+          if (provider.unreadCount > 0)
+            Positioned(
+              top: 12, right: 12,
+              child: Container(
+                width: 10, height: 10,
+                decoration: BoxDecoration(
+                  color: Colors.redAccent,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 2),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickActions(BuildContext context) {
+    return Column(
+      children: [
+        InkWell(
+          onTap: () {
+            final authProvider = Provider.of<AuthProvider>(context, listen: false);
+            final pId = authProvider.userId ?? '';
+            Navigator.push(context, MaterialPageRoute(builder: (_) => WeeklyScheduleScreen(professorId: pId)));
+          },
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(28),
+              gradient: const LinearGradient(
+                colors: [Color(0xFF1E88E5), Color(0xFF1565C0)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF1E88E5).withValues(alpha: 0.3),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                )
+              ],
+            ),
+            child: Row(
+              children: [
+                const CircleAvatar(
+                  radius: 30,
+                  backgroundColor: Colors.white24,
+                  child: Icon(Icons.calendar_month_rounded, color: Colors.white, size: 32),
+                ),
+                const SizedBox(width: 20),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('plannings_title'.tr(), 
+                        style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
+                      const SizedBox(height: 4),
+                      Text('view_weekly_sessions'.tr(), 
+                        style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500)),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 28),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Text(title, 
+      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF1A1C1E)));
+  }
+
+  Widget _buildModernStats(List sessions) {
+    return Consumer<SessionProvider>(
+      builder: (context, provider, child) {
+        final stats = provider.professorStats;
+        final totalSessions = stats['totalSessions']?.toString() ?? '0';
+        final todayAttendance = stats['todayAttendance']?.toString() ?? '0';
+        final attendanceRate = stats['attendanceRate']?.toString() ?? '0';
+
+        return Row(
+          children: [
+            _buildStatsCard('sessions_count_label'.tr(), totalSessions, Icons.layers_rounded, Colors.blue),
+            const SizedBox(width: 12),
+            _buildStatsCard('today_attendance'.tr(), todayAttendance, Icons.group_rounded, Colors.teal),
+            const SizedBox(width: 12),
+            _buildStatsCard('attendance_rate'.tr(), attendanceRate, Icons.analytics_rounded, Colors.orange),
+          ],
+        );
+      }
+    );
+  }
+
+  Widget _buildStatsCard(String label, String value, IconData icon, Color color) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4))
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: color, size: 20),
+            const SizedBox(height: 12),
+            Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xFF1A1C1E))),
+            const SizedBox(height: 2),
+            Text(label, style: const TextStyle(fontSize: 10, color: Color(0xFF9E9E9E), fontWeight: FontWeight.w600)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSessionList(List sessions) {
+    // Filter sessions to only show those that are ACTIVE AND have a QR code generated
+    // This matches the user requirement: "show only active sessions when start time arrives and QR is generated"
+    final activeSessions = sessions.where((s) => s.status == 'ACTIVE' && s.qrToken != null && DateTime.now().isAfter(s.startTime) && DateTime.now().isBefore(s.endTime)).toList();
+
+    if (activeSessions.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 40),
+        child: Column(
+          children: [
+            Icon(Icons.inbox_rounded, size: 64, color: Colors.grey.withValues(alpha: 0.2)),
+            const SizedBox(height: 16),
+            Text('no_active_sessions_with_qr'.tr(), 
+              style: const TextStyle(color: Color(0xFF9E9E9E), fontSize: 14, fontWeight: FontWeight.w500)),
+          ],
+        ),
+      );
+    }
+
+    final limitedSessions = activeSessions.take(5).toList();
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: limitedSessions.length,
+      itemBuilder: (context, index) {
+        final session = limitedSessions[index];
+        // 🛑 MASTER OVERRIDE: Same logic as history screen
+        final bool isClosed = DateTime.now().isAfter(session.endTime.toLocal()) || 
+                             (session.status ?? '').toUpperCase() == 'CLOSED';
+        bool isActive = !isClosed;
+        
+        return Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          child: InkWell(
+            onTap: () => Navigator.push(context, MaterialPageRoute(
+              builder: (_) => AttendanceListScreen(courseName: session.courseName, sessionId: session.id ?? '')
+            )),
+            borderRadius: BorderRadius.circular(24),
+            child: Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 12, offset: const Offset(0, 6))
+                ],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: (isActive ? Colors.teal : Colors.blueGrey).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(16)
+                    ),
+                    child: Icon(Icons.school_rounded, color: isActive ? Colors.teal : Colors.blueGrey, size: 24),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(session.courseName, 
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: Color(0xFF1A1C1E))),
+                            ),
+                            const SizedBox(width: 8),
+                            _buildStatusBadge(isActive),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Text('${session.groupName} â€¢ ${session.labName}', 
+                          style: const TextStyle(fontSize: 12, color: Color(0xFF6C757D), fontWeight: FontWeight.w500)),
+                      ],
+                    ),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text('${session.attendanceCount ?? 0}', 
+                        style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: AppColors.primaryTeal)),
+                      Text('students_label'.tr(), style: const TextStyle(fontSize: 10, color: Color(0xFF9E9E9E), fontWeight: FontWeight.w600)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildStatusBadge(bool active) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: (active ? Colors.green : Colors.grey).withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8)
+      ),
+      child: Text(active ? 'status_active'.tr() : 'status_closed'.tr(), 
+        style: TextStyle(color: active ? Colors.green : Colors.grey, fontSize: 10, fontWeight: FontWeight.w800)),
+    );
+  }
+
+  void _showLogoutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('logout_title'.tr()),
+        content: Text('logout_confirm_msg'.tr()),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('cancel'.tr())),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final authProvider = Provider.of<AuthProvider>(context, listen: false);
+              final navigator = Navigator.of(context);
+              await authProvider.logout();
+              
+              navigator.pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const LoginScreen()),
+                (route) => false,
+              );
+            },
+            child: Text('logout'.tr(), style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+
+
+
+
